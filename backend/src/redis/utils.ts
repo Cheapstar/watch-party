@@ -1,0 +1,22 @@
+import { UserDetails } from "./types";
+
+export function createUserDetails(
+  userId: string,
+  userName: string,
+  isHost: boolean
+): UserDetails {
+  return {
+    userId,
+    userName,
+    isHost,
+    joinedAt: new Date(),
+    permissions: {
+      canChat: true,
+      canKick: isHost,
+      canMuteOthers: isHost,
+      canPausePlay: isHost,
+      canShareScreen: isHost,
+      canShareVideo: isHost,
+    },
+  };
+}
