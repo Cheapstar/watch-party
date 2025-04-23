@@ -9,7 +9,7 @@ export function createUserDetails(
     userId,
     userName,
     isHost,
-    joinedAt: new Date(),
+    joinedAt: Date.now(),
     permissions: {
       canChat: true,
       canKick: isHost,

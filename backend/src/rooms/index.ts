@@ -28,7 +28,7 @@ export function createRoomDetails(
     routerId: null,
 
     participantCount: 1,
-    startedAt: null,
+    startedAt: Date.now(),
     endedAt: null,
 
     features: {

@@ -16,6 +16,7 @@ export interface RoomSettings {
     // raiseHand?: boolean;
   };
   permissions?: {
+    canShareVideo?: boolean;
     canShareScreen?: boolean;
     canChat?: boolean;
     canReact?: boolean;

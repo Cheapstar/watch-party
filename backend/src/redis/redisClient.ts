@@ -11,6 +11,12 @@ import { UserDetails } from "./types";
         which will contain memberId to userDetails mapping
 
 */
+export class RoomNotFoundError extends Error {
+  constructor(roomId: string) {
+    super(`Room with ID ${roomId} does not exist`);
+    this.name = "RoomNotFoundError";
+  }
+}
 
 export default class RedisService {
   private redisClient: Redis;
@@ -23,15 +29,28 @@ export default class RedisService {
     this.redisClient = redisClient;
   }
 
-  createRoom = async (roomDetails: RoomDetails): Promise<string> => {
+  createRoom = async (
+    roomDetails: RoomDetails,
+    userDetails: UserDetails
+  ): Promise<string> => {
     const roomId = crypto.randomUUID();
-    const response = await this.redisClient.hset(
+
+    const multi = this.redisClient.multi();
+    const rooms = multi.hset(
       this.getKey.rooms(roomId),
       roomId,
       JSON.stringify(roomDetails)
     );
 
-    if (!response) throw new Error("Couldn't save the details in the redis");
+    const member = multi.hset(
+      this.getKey.members(roomId),
+      userDetails.userId,
+      JSON.stringify(userDetails)
+    );
+
+    await multi.exec();
+
+    // if (!response) throw new Error("Couldn't save the details in the redis");
 
     return roomId;
   };
@@ -40,6 +59,8 @@ export default class RedisService {
     roomId: string,
     userDetails: UserDetails
   ): Promise<void> => {
+    await this.ensureRoomExists(roomId);
+
     const response = await this.redisClient.hset(
       this.getKey.members(roomId),
       userDetails.userId,
@@ -52,6 +73,8 @@ export default class RedisService {
     roomId: string,
     userId: string
   ): Promise<UserDetails> => {
+    await this.ensureRoomExists(roomId);
+
     const response = await this.redisClient.hget(
       this.getKey.members(roomId),
       userId
@@ -66,6 +89,8 @@ export default class RedisService {
     roomId: string,
     userId: string
   ): Promise<void> => {
+    await this.ensureRoomExists(roomId);
+
     const response = await this.redisClient.hdel(
       this.getKey.members(roomId),
       userId
@@ -81,6 +106,8 @@ export default class RedisService {
   };
 
   deleteRoom = async (roomId: string): Promise<void> => {
+    await this.ensureRoomExists(roomId);
+
     // Redis Transaction
     const multi = this.redisClient.multi();
 
@@ -93,8 +120,52 @@ export default class RedisService {
   };
 
   getAllMember = async (roomId: string): Promise<UserDetails[]> => {
+    await this.ensureRoomExists(roomId);
+
     const members = await this.redisClient.hvals(this.getKey.members(roomId));
 
     return members.map((m) => JSON.parse(m));
+  };
+
+  roomExists = async (roomId: string) => {
+    return (await this.redisClient.exists(this.getKey.rooms(roomId))) === 1;
+  };
+
+  getRoomDetails = async (roomId: string) => {
+    await this.ensureRoomExists(roomId);
+
+    const response = await this.redisClient.hget(
+      this.getKey.rooms(roomId),
+      roomId
+    );
+
+    if (!response)
+      throw new Error("Error Occured While fetching ROOM details from redis");
+
+    return JSON.parse(response);
+  };
+
+  isUserHost = async (roomId: string, userId: string) => {
+    await this.ensureRoomExists(roomId);
+
+    const result = await this.redisClient.hget(
+      this.getKey.members(roomId),
+      userId
+    );
+
+    if (!result)
+      throw new Error(
+        `User Does not exists inside the room with roomId:${roomId}`
+      );
+
+    const userDetails: UserDetails = JSON.parse(result);
+
+    return userDetails.isHost;
+  };
+
+  ensureRoomExists = async (roomId: string) => {
+    const result = await this.roomExists(roomId);
+
+    if (!result) throw new RoomNotFoundError(roomId);
   };
 }

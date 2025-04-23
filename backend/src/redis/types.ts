@@ -3,7 +3,7 @@ export interface UserDetails {
   userId: string;
   userName: string;
   isHost: boolean;
-  joinedAt: Date;
+  joinedAt: number;
   permissions: {
     canShareVideo: boolean;
     canShareScreen: boolean;
