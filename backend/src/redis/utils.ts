@@ -20,3 +20,9 @@ export function createUserDetails(
     },
   };
 }
+
+export function userDto(usd: UserDetails) {
+  return {
+    ...usd,
+  };
+}

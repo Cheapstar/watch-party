@@ -1,5 +1,6 @@
 import { Router } from "mediasoup/node/lib/types";
 import { Room } from "./room";
+import RedisService from "../redis/redisClient";
 
 export class RoomManager {
   public rooms: Map<string, Room> = new Map();
@@ -15,8 +16,8 @@ export class RoomManager {
     throw new Error(`Room with the roomId:${roomId} does not exists`);
   };
 
-  createRoom = (roomId: string, router: Router) => {
-    const room = new Room(router, roomId);
+  createRoom = (roomId: string, router: Router, redisService: RedisService) => {
+    const room = new Room(router, roomId, redisService);
 
     this.rooms.set(roomId, room);
     this.routers.set(roomId, router);

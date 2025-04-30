@@ -1,3 +1,9 @@
+import { ConferenceRoom } from "@/components/ConferenceRoom";
+
 export default function Page() {
-  return <div>Loading...</div>;
+  return (
+    <div>
+      <ConferenceRoom></ConferenceRoom>
+    </div>
+  );
 }

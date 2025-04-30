@@ -1,7 +1,8 @@
 import { mediasoupConfig } from "./config/mediasoup.config";
 import { Worker } from "mediasoup/node/lib/WorkerTypes";
-import mediasoup from "mediasoup";
+import * as mediasoup from "mediasoup";
 import { Router } from "mediasoup/node/lib/types";
+import { logger } from "../utils/logger";
 
 export class MediaSoupService {
   private worker?: Worker;
@@ -12,10 +13,11 @@ export class MediaSoupService {
   createWorker = async () => {
     try {
       const newWorker = await mediasoup.createWorker(mediasoupConfig.worker);
+      logger.info("MediaSoup Worker is successfully created");
 
       // subscribing to the died event
       newWorker.on("died", () => {
-        console.log(
+        logger.error(
           "Mediasoup worker died, exiting in 2 seconds.... [pid%id]",
           newWorker.pid
         );
@@ -24,10 +26,8 @@ export class MediaSoupService {
 
       this.worker = newWorker;
     } catch (error) {
-      if (error instanceof Error) {
-        console.log("Couldn't create the mediasoup worker", error);
-      }
-      throw new Error("Couldn't create the mediasoup worker");
+      logger.error("Could not create the worker", error);
+      throw error;
     }
   };
 
@@ -41,16 +41,17 @@ export class MediaSoupService {
         mediaCodecs: mediasoupConfig.router.mediaCodecs,
       });
 
+      logger.info("Mediasoup Router has been created succeffully");
       this.routers.set(roomId, router);
 
       return router;
     } catch (error) {
-      console.log(
+      logger.error(
         `Error while creating the router for the team with teamId:${roomId}`,
         error
       );
 
-      throw new Error("Couldn't create the Router");
+      throw error;
     }
   };
 }

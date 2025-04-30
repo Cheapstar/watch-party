@@ -55,6 +55,7 @@ class WebSocketClient {
                 console.log("New Connection Established");
                 const userId = (_a = req.url) === null || _a === void 0 ? void 0 : _a.split("=")[1];
                 console.log("userId", userId);
+                this.registerUser(userId, ws);
                 ws.on("message", (rawData) => __awaiter(this, void 0, void 0, function* () {
                     var _a;
                     const parsedData = JSON.parse(rawData.toString());
@@ -64,12 +65,15 @@ class WebSocketClient {
                         if(completed) => immediate execution of the new jon
                         else it will be in queue jab previous ho jayega then exec happen
                      */
+                    console.log("recieved Message is", parsedData);
                     const queue = (_a = this.queues.get(userId)) !== null && _a !== void 0 ? _a : Promise.resolve();
                     const nextJob = queue.then(() => __awaiter(this, void 0, void 0, function* () {
                         var _a;
                         const { type, payload } = parsedData;
                         const userHandlers = (_a = this.handlers
                             .get(userId)) === null || _a === void 0 ? void 0 : _a.get(type);
+                        if (!userHandlers)
+                            return Promise.resolve();
                         yield Promise.all(userHandlers.map((fn) => fn({ userId, payload })));
                     }));
                     /*
@@ -136,7 +140,15 @@ class WebSocketClient {
                 message: "User has Been Registered Thank You",
             });
         };
+        this.broadCastMessage = ({ userIds, type, payload, }) => {
+            if (userIds.length < 1)
+                return;
+            userIds.forEach((id) => {
+                this.send(id, type, payload);
+            });
+        };
         this.wss = new ws_1.WebSocketServer({ server: httpServer });
+        this.connect();
     }
 }
 exports.WebSocketClient = WebSocketClient;

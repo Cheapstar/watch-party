@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import { CgSpinnerAlt } from "react-icons/cg";
-import { roomIdAtom, userIdAtom } from "@/store";
+import {
+  roomIdAtom,
+  roomnameAtom,
+  userIdAtom,
+  usernameAtom,
+  isHostAtom,
+} from "@/store";
 import { useAtom } from "jotai";
 import { useForm } from "react-hook-form";
 import axios from "axios";
@@ -29,19 +35,25 @@ export function CreateRoom() {
   });
 
   const [loading, setLoading] = useState<boolean>(false);
-  const [userId, setUserId] = useAtom(userIdAtom);
+  const [, setUserId] = useAtom(userIdAtom);
   const [, setRoomId] = useAtom(roomIdAtom);
+  const [, setRoomname] = useAtom(roomnameAtom);
+  const [, setUsername] = useAtom(usernameAtom);
+  const [, setIsHost] = useAtom(isHostAtom);
 
   async function onSubmit(data: Inputs) {
     setLoading(true);
 
     const id = crypto.randomUUID();
     setUserId(id);
+    setRoomname(data.roomname);
+    setUsername(data.username);
+    setIsHost(true);
 
     const response = await axios.post(
       "http://localhost:8080/api/v1/room/create-room",
       {
-        userId,
+        userId: id,
         username: data.username,
         roomname: data.roomname,
       }
@@ -52,6 +64,11 @@ export function CreateRoom() {
       /* Save thr roomId and then move to the different window , show toast also */
       console.log("Sucessfull", resData);
       setRoomId(resData.roomId);
+      /*
+        Create the RoomDetails {} 
+
+      */
+
       redirect(`http://localhost:3000/room/${resData.roomId}`);
     } else {
       console.log("Sorry Could not create the room");
@@ -90,7 +107,9 @@ export function CreateRoom() {
             className="bg-white/10 border border-white/20 rounded-md
              px-4 py-2 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
             placeholder="John Doe"
-            {...register("username")}
+            {...register("username", {
+              required: true,
+            })}
           />
         </div>
 
@@ -107,7 +126,9 @@ export function CreateRoom() {
             className="bg-white/10 border border-white/20 rounded-md px-4 py-2
              text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
             placeholder="untitled"
-            {...register("roomname")}
+            {...register("roomname", {
+              required: true,
+            })}
           />
         </div>
 

@@ -8,6 +8,7 @@ import { WebSocketClient } from "./websocket/websocketclient";
 import cors from "cors";
 import { RoomManager } from "./rooms/roomManager";
 import { MediaSoupService } from "./medisoup/mediasoupService";
+import { logger } from "./utils/logger";
 
 dotenv.config();
 
@@ -33,8 +34,16 @@ async function startServer() {
   app.use(express.json());
   app.use(
     "/api/v1/",
-    createRootRouter(redisService, roomManager, mediasoupService)
+    createRootRouter(redisService, roomManager, mediasoupService, wsClient)
   );
+
+  process.on("SIGTERM", () => {
+    logger.info("SIGTERM received. Shutting down gracefully...");
+    httpServer.close(() => {
+      logger.info("Server closed");
+      process.exit(0);
+    });
+  });
 }
 
 startServer();

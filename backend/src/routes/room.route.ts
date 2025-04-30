@@ -1,12 +1,13 @@
 import { Router } from "express";
 import RedisService from "../redis/redisClient";
 import { createRoomDetails } from "../rooms";
-import { createUserDetails } from "../redis/utils";
+import { createUserDetails, userDto } from "../redis/utils";
 import { RoomManager } from "../rooms/roomManager";
 import { MediaSoupService } from "../medisoup/mediasoupService";
 import { Room } from "../rooms/room";
 import { Participant } from "../rooms/participant/participant";
 import { WebSocketClient } from "../websocket/websocketclient";
+import { logger } from "../utils/logger";
 
 const ROUTES = {
   createRoom: "/create-room",
@@ -28,6 +29,8 @@ export function createRoomRouter(
     try {
       const { userId, username, roomname } = req.body;
 
+      logger.info(`Creating the room with hostId:${userId}`);
+
       const userDetails = createUserDetails(userId, username, true);
       const roomDetails = createRoomDetails(userId, roomname, {
         maxParticipants: 10,
@@ -44,10 +47,11 @@ export function createRoomRouter(
 
       const roomId = await redisService.createRoom(roomDetails, userDetails);
       const mediasoupRouter = await mediasoupService.createRouter({ roomId });
-      const room = roomManager.createRoom(roomId, mediasoupRouter);
-      const participant = new Participant(userId, room, wsClient);
-
-      room.saveParticipant(participant, userId);
+      const room = roomManager.createRoom(
+        roomId,
+        mediasoupRouter,
+        redisService
+      );
 
       res
         .json({
@@ -127,6 +131,7 @@ export function createRoomRouter(
     try {
       const roomId = req.params.roomId;
 
+      logger.info(`Details are userId:${userId} , roomId:${roomId}`);
       // Check if the room Exists
       const roomExists = await redisService.roomExists(roomId);
 
@@ -141,22 +146,51 @@ export function createRoomRouter(
       }
 
       // Room Exists , Save the user
-
-      const userDetails = createUserDetails(userId, username, false);
-      const addMember = await redisService.addMemberToTheRoom(
-        roomId,
-        userDetails
-      );
-
       // Connect this to the mediasoup client
       const room = roomManager.getRoom(roomId) as Room;
-      const participant = new Participant(userId, room, wsClient);
+      const isHost = await redisService.isUserHost(roomId, userId);
+      if (!isHost) {
+        const userDetails = createUserDetails(userId, username, isHost);
+        const addMember = await redisService.addMemberToTheRoom(
+          roomId,
+          userDetails
+        );
+
+        /*
+          Send All the existing users details about this user
+        */
+        wsClient.broadCastMessage({
+          userIds: room.getOtherParticipantsUserId({ userId }),
+          type: "new-participant",
+          payload: {
+            userDetails: userDto(userDetails),
+          },
+        });
+      }
+
+      const participant = new Participant(
+        userId,
+        room,
+        wsClient,
+        username,
+        isHost
+      );
 
       room.saveParticipant(participant, userId);
 
+      /*
+        Return All the user details object for this new-joinee
+      */
+
+      const allUserDetails = await redisService.getAllMember(roomId);
+
       res
         .json({
+          success: true,
           message: "User has successfully joined the room",
+          data: {
+            allUserDetails: allUserDetails,
+          },
         })
         .status(200);
     } catch (error) {
@@ -228,9 +262,9 @@ export function createRoomRouter(
         return;
       }
 
-      /* Handle all the mediasoup logic  and notify all the other participants about call end*/
+      /* Yaha hume karna hai Handle all the mediasoup logic  and notify all the other participants about call end*/
       const room = roomManager.getRoom(roomId);
-      const participants = room?.getAllParticipant();
+      const participants = room?.getAllParticipantIds();
 
       /* Broadcast to all the client about room has ended */
 

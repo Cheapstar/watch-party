@@ -9,6 +9,7 @@ export class WebSocketClient {
 
   constructor(httpServer: HTTPServer) {
     this.wss = new WebSocketServer({ server: httpServer });
+    this.connect();
   }
 
   connect = () => {
@@ -30,12 +31,16 @@ export class WebSocketClient {
             else it will be in queue jab previous ho jayega then exec happen
          */
 
+        console.log("recieved Message is", parsedData);
+
         const queue = this.queues.get(userId) ?? Promise.resolve();
         const nextJob = queue.then(async () => {
           const { type, payload } = parsedData;
           const userHandlers = this.handlers
             .get(userId)
             ?.get(type) as handlerFn[];
+
+          if (!userHandlers) return Promise.resolve();
           await Promise.all(userHandlers.map((fn) => fn({ userId, payload })));
         });
 
@@ -113,16 +118,31 @@ export class WebSocketClient {
       message: "User has Been Registered Thank You",
     });
   };
+
+  broadCastMessage = ({
+    userIds,
+    type,
+    payload,
+  }: {
+    userIds: string[];
+    type: string;
+    payload: any;
+  }) => {
+    if (userIds.length < 1) return;
+
+    userIds.forEach((id) => {
+      this.send(id, type, payload);
+    });
+  };
 }
 
 // on join-room everything begins
 
 interface handlerFn {
-  ({
-    userId,
-    payload,
-  }: {
-    userId: string;
-    payload?: any;
-  }): Promise<void> | void;
+  ({ userId, payload }: Args): Promise<void> | void;
+}
+
+interface Args {
+  userId: string;
+  payload?: any;
 }

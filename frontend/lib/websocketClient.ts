@@ -6,6 +6,7 @@ export class WebSocketClient {
 
   constructor(url: string) {
     this.socket = new WebSocket(url);
+    console.log("Registering the user at url ", url);
     this.connect();
   }
 
@@ -21,7 +22,10 @@ export class WebSocketClient {
       console.log("Received Message:", parsedData);
 
       const nextJob = this.jobQueue.then(async () => {
-        const typeHandlers = this.handlers.get(type);
+        const typeHandlers = this.handlers.get(type) as handlerFn[];
+
+        if (!typeHandlers) return Promise.resolve();
+
         await Promise.all(
           (typeHandlers as handlerFn[]).map((fn) => fn(payload))
         );
@@ -30,11 +34,7 @@ export class WebSocketClient {
       this.jobQueue = nextJob;
 
       nextJob.catch((err) => {
-        console.log(
-          err instanceof Error
-            ? err.message
-            : "Error Occured While executing the Job"
-        );
+        console.log("Error Occured While executing the Job", err);
       });
     };
 

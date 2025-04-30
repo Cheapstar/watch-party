@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createUserDetails = createUserDetails;
+exports.userDto = userDto;
 function createUserDetails(userId, userName, isHost) {
     return {
         userId,
@@ -16,4 +17,7 @@ function createUserDetails(userId, userName, isHost) {
             canShareVideo: isHost,
         },
     };
+}
+function userDto(usd) {
+    return Object.assign({}, usd);
 }
