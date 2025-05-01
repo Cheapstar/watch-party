@@ -1,8 +1,9 @@
-import { Router } from "mediasoup/node/lib/RouterTypes";
-import { Participant } from "./participant/participant";
-import { Producer } from "mediasoup/node/lib/ProducerTypes";
-import { logger } from "../utils/logger";
-import RedisService from "../redis/redisClient";
+import { Participant } from "./participant/participant.js";
+
+import { logger } from "../utils/logger.js";
+import RedisService from "../redis/redisClient.js";
+import { Producer, Router } from "mediasoup/types";
+import { RoomDetails } from "./rooms.types.js";
 
 export class Room {
   public router: Router;
@@ -20,6 +21,11 @@ export class Room {
   getRouter = () => {
     this.ensureRouterInitialised();
     return this.router;
+  };
+
+  getRoomDetails = async () => {
+    const roomDetails = await this.redisService.getRoomDetails(this.roomId);
+    return roomDetails;
   };
 
   saveParticipant = (participant: Participant, userId: string) => {
@@ -144,5 +150,32 @@ export class Room {
     });
 
     return remainingProducers;
+  };
+
+  saveExternalMedia = async ({ url }: { url: string }) => {
+    try {
+      logger.info(`Saving the external Media in the redis:${url}`);
+      const roomDetails = await this.redisService.getRoomDetails(this.roomId);
+
+      roomDetails.externalMedia = url;
+
+      this.redisService.saveRoom(this.roomId, roomDetails);
+    } catch (error) {
+      logger.error(`Error Occured While saving the external media ${error}`);
+      throw error;
+    }
+  };
+  removeExternalMedia = async () => {
+    try {
+      logger.info(`Removing the external Media in the redis`);
+      const roomDetails = await this.redisService.getRoomDetails(this.roomId);
+
+      roomDetails.externalMedia = "";
+
+      this.redisService.saveRoom(this.roomId, roomDetails);
+    } catch (error) {
+      logger.error(`Error Occured While removing the external media ${error}`);
+      throw error;
+    }
   };
 }

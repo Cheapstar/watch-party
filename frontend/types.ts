@@ -31,6 +31,8 @@ export interface RoomDetails {
     reactions: boolean;
     // raiseHand: boolean;
   };
+
+  externalMedia: string;
 }
 
 export interface UserDetails {

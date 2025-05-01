@@ -69,4 +69,6 @@ export interface RoomDetails {
     canChat: boolean;
     canReact: boolean;
   };
+
+  externalMedia?: string;
 }

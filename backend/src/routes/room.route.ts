@@ -1,13 +1,13 @@
 import { Router } from "express";
-import RedisService from "../redis/redisClient";
-import { createRoomDetails } from "../rooms";
-import { createUserDetails, userDto } from "../redis/utils";
-import { RoomManager } from "../rooms/roomManager";
-import { MediaSoupService } from "../medisoup/mediasoupService";
-import { Room } from "../rooms/room";
-import { Participant } from "../rooms/participant/participant";
-import { WebSocketClient } from "../websocket/websocketclient";
-import { logger } from "../utils/logger";
+import RedisService from "../redis/redisClient.js";
+import { createRoomDetails } from "../rooms/index.js";
+import { createUserDetails, userDto } from "../redis/utils.js";
+import { RoomManager } from "../rooms/roomManager.js";
+import { MediaSoupService } from "../medisoup/mediasoupService.js";
+import { Room } from "../rooms/room.js";
+import { Participant } from "../rooms/participant/participant.js";
+import { WebSocketClient } from "../websocket/websocketclient.js";
+import { logger } from "../utils/logger.js";
 
 const ROUTES = {
   createRoom: "/create-room",

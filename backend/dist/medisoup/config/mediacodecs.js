@@ -1,5 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const mediaCodecs = [
     {
         kind: "audio",
@@ -27,4 +25,4 @@ const mediaCodecs = [
         },
     },
 ];
-exports.default = mediaCodecs;
+export default mediaCodecs;

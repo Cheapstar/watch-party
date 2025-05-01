@@ -1,10 +1,7 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createRootRouter = createRootRouter;
-const express_1 = require("express");
-const room_route_1 = require("./room.route");
-function createRootRouter(redisService, roomManager, mediasoupService, wsClient) {
-    const router = (0, express_1.Router)();
-    router.use("/room", (0, room_route_1.createRoomRouter)(redisService, roomManager, mediasoupService, wsClient));
+import { Router } from "express";
+import { createRoomRouter } from "./room.route.js";
+export function createRootRouter(redisService, roomManager, mediasoupService, wsClient) {
+    const router = Router();
+    router.use("/room", createRoomRouter(redisService, roomManager, mediasoupService, wsClient));
     return router;
 }

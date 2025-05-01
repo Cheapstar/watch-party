@@ -1,8 +1,8 @@
-import { RtpCodecCapability } from "mediasoup/node/lib/rtpParametersTypes.js";
 import {
   WorkerLogLevel,
   WorkerLogTag,
-} from "mediasoup/node/lib/WorkerTypes.js";
+  RtpCodecCapability,
+} from "mediasoup/types";
 
 export const mediasoupConfig = {
   worker: {

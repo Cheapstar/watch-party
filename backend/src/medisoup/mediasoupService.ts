@@ -1,8 +1,7 @@
-import { mediasoupConfig } from "./config/mediasoup.config";
-import { Worker } from "mediasoup/node/lib/WorkerTypes";
+import { mediasoupConfig } from "./config/mediasoup.config.js";
 import * as mediasoup from "mediasoup";
-import { Router } from "mediasoup/node/lib/types";
-import { logger } from "../utils/logger";
+import { logger } from "../utils/logger.js";
+import { Router, Worker } from "mediasoup/types";
 
 export class MediaSoupService {
   private worker?: Worker;

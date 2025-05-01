@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 export function AudioVisualizer({
   audioStream,
-  color = "#4f46e5", // Default indigo color
+  color = "#4f46e5",
   size = 120,
 }: {
   audioStream: MediaStream;

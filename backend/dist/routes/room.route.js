@@ -1,20 +1,8 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createRoomRouter = createRoomRouter;
-const express_1 = require("express");
-const rooms_1 = require("../rooms");
-const utils_1 = require("../redis/utils");
-const participant_1 = require("../rooms/participant/participant");
-const logger_1 = require("../utils/logger");
+import { Router } from "express";
+import { createRoomDetails } from "../rooms/index.js";
+import { createUserDetails, userDto } from "../redis/utils.js";
+import { Participant } from "../rooms/participant/participant.js";
+import { logger } from "../utils/logger.js";
 const ROUTES = {
     createRoom: "/create-room",
     removeUserFromRoom: "/remove-user-from-room",
@@ -22,14 +10,14 @@ const ROUTES = {
     leaveRoom: "/leave-room/:roomId",
     endCall: "/end-call/:roomId",
 };
-function createRoomRouter(redisService, roomManager, mediasoupService, wsClient) {
-    const router = (0, express_1.Router)();
-    router.post(ROUTES.createRoom, (req, res) => __awaiter(this, void 0, void 0, function* () {
+export function createRoomRouter(redisService, roomManager, mediasoupService, wsClient) {
+    const router = Router();
+    router.post(ROUTES.createRoom, async (req, res) => {
         try {
             const { userId, username, roomname } = req.body;
-            logger_1.logger.info(`Creating the room with hostId:${userId}`);
-            const userDetails = (0, utils_1.createUserDetails)(userId, username, true);
-            const roomDetails = (0, rooms_1.createRoomDetails)(userId, roomname, {
+            logger.info(`Creating the room with hostId:${userId}`);
+            const userDetails = createUserDetails(userId, username, true);
+            const roomDetails = createRoomDetails(userId, roomname, {
                 maxParticipants: 10,
                 allowedMedia: {
                     video: true,
@@ -41,8 +29,8 @@ function createRoomRouter(redisService, roomManager, mediasoupService, wsClient)
                     reactions: true,
                 },
             });
-            const roomId = yield redisService.createRoom(roomDetails, userDetails);
-            const mediasoupRouter = yield mediasoupService.createRouter({ roomId });
+            const roomId = await redisService.createRoom(roomDetails, userDetails);
+            const mediasoupRouter = await mediasoupService.createRouter({ roomId });
             const room = roomManager.createRoom(roomId, mediasoupRouter, redisService);
             res
                 .json({
@@ -63,11 +51,11 @@ function createRoomRouter(redisService, roomManager, mediasoupService, wsClient)
             })
                 .status(400);
         }
-    }));
-    router.post(ROUTES.removeUserFromRoom, (req, res) => __awaiter(this, void 0, void 0, function* () {
+    });
+    router.post(ROUTES.removeUserFromRoom, async (req, res) => {
         try {
             const { roomId, userId, removeUserId } = req.body;
-            const isUserHost = yield redisService.isUserHost(roomId, userId);
+            const isUserHost = await redisService.isUserHost(roomId, userId);
             if (!isUserHost) {
                 res
                     .json({
@@ -78,9 +66,9 @@ function createRoomRouter(redisService, roomManager, mediasoupService, wsClient)
             }
             /* Need to handle all the mediasoup server and broadcast message to all the other participants */
             const room = roomManager.getRoom(roomId);
-            room === null || room === void 0 ? void 0 : room.removeParticipant(removeUserId);
+            room?.removeParticipant(removeUserId);
             wsClient.send(removeUserId, "removed-from-room", "");
-            const response = yield redisService.removeUserFromRoom(roomId, removeUserId);
+            const response = await redisService.removeUserFromRoom(roomId, removeUserId);
             res
                 .json({
                 success: true,
@@ -99,14 +87,14 @@ function createRoomRouter(redisService, roomManager, mediasoupService, wsClient)
                     : "Could not remove user from the room",
             });
         }
-    }));
-    router.post(ROUTES.joinRoom, (req, res) => __awaiter(this, void 0, void 0, function* () {
+    });
+    router.post(ROUTES.joinRoom, async (req, res) => {
         const { userId, username } = req.body;
         try {
             const roomId = req.params.roomId;
-            logger_1.logger.info(`Details are userId:${userId} , roomId:${roomId}`);
+            logger.info(`Details are userId:${userId} , roomId:${roomId}`);
             // Check if the room Exists
-            const roomExists = yield redisService.roomExists(roomId);
+            const roomExists = await redisService.roomExists(roomId);
             if (!roomExists) {
                 res
                     .json({
@@ -118,10 +106,10 @@ function createRoomRouter(redisService, roomManager, mediasoupService, wsClient)
             // Room Exists , Save the user
             // Connect this to the mediasoup client
             const room = roomManager.getRoom(roomId);
-            const isHost = yield redisService.isUserHost(roomId, userId);
+            const isHost = await redisService.isUserHost(roomId, userId);
             if (!isHost) {
-                const userDetails = (0, utils_1.createUserDetails)(userId, username, isHost);
-                const addMember = yield redisService.addMemberToTheRoom(roomId, userDetails);
+                const userDetails = createUserDetails(userId, username, isHost);
+                const addMember = await redisService.addMemberToTheRoom(roomId, userDetails);
                 /*
                   Send All the existing users details about this user
                 */
@@ -129,16 +117,16 @@ function createRoomRouter(redisService, roomManager, mediasoupService, wsClient)
                     userIds: room.getOtherParticipantsUserId({ userId }),
                     type: "new-participant",
                     payload: {
-                        userDetails: (0, utils_1.userDto)(userDetails),
+                        userDetails: userDto(userDetails),
                     },
                 });
             }
-            const participant = new participant_1.Participant(userId, room, wsClient, username, isHost);
+            const participant = new Participant(userId, room, wsClient, username, isHost);
             room.saveParticipant(participant, userId);
             /*
               Return All the user details object for this new-joinee
             */
-            const allUserDetails = yield redisService.getAllMember(roomId);
+            const allUserDetails = await redisService.getAllMember(roomId);
             res
                 .json({
                 success: true,
@@ -160,8 +148,8 @@ function createRoomRouter(redisService, roomManager, mediasoupService, wsClient)
                     : `Error Occured While user with userId:${userId} was joining the room`,
             });
         }
-    }));
-    router.post(ROUTES.leaveRoom, (req, res) => __awaiter(this, void 0, void 0, function* () {
+    });
+    router.post(ROUTES.leaveRoom, async (req, res) => {
         const { userId } = req.body;
         try {
             const roomId = req.params.roomId;
@@ -169,8 +157,8 @@ function createRoomRouter(redisService, roomManager, mediasoupService, wsClient)
               Handle all the mediasoup logic here
             */
             const room = roomManager.getRoom(roomId);
-            room === null || room === void 0 ? void 0 : room.removeParticipant(userId);
-            const response = yield redisService.removeUserFromRoom(roomId, userId);
+            room?.removeParticipant(userId);
+            const response = await redisService.removeUserFromRoom(roomId, userId);
             res
                 .json({
                 message: "User has exited the room successfully",
@@ -190,12 +178,12 @@ function createRoomRouter(redisService, roomManager, mediasoupService, wsClient)
             })
                 .status(400);
         }
-    }));
-    router.post(ROUTES.endCall, (req, res) => __awaiter(this, void 0, void 0, function* () {
+    });
+    router.post(ROUTES.endCall, async (req, res) => {
         const { userId } = req.body;
         const roomId = req.params.roomId;
         try {
-            const response = yield redisService.isUserHost(roomId, userId);
+            const response = await redisService.isUserHost(roomId, userId);
             if (!response) {
                 res
                     .json({
@@ -206,10 +194,10 @@ function createRoomRouter(redisService, roomManager, mediasoupService, wsClient)
             }
             /* Yaha hume karna hai Handle all the mediasoup logic  and notify all the other participants about call end*/
             const room = roomManager.getRoom(roomId);
-            const participants = room === null || room === void 0 ? void 0 : room.getAllParticipantIds();
+            const participants = room?.getAllParticipantIds();
             /* Broadcast to all the client about room has ended */
             roomManager.deleteRoom(roomId);
-            yield redisService.deleteRoom(roomId);
+            await redisService.deleteRoom(roomId);
             res
                 .json({
                 message: "Call has been successfully terminated , ty",
@@ -229,6 +217,6 @@ function createRoomRouter(redisService, roomManager, mediasoupService, wsClient)
             })
                 .status(400);
         }
-    }));
+    });
     return router;
 }

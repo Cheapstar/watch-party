@@ -1,8 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.RoomManager = void 0;
-const room_1 = require("./room");
-class RoomManager {
+import { Room } from "./room.js";
+export class RoomManager {
     constructor() {
         this.rooms = new Map();
         this.routers = new Map();
@@ -13,16 +10,15 @@ class RoomManager {
             throw new Error(`Room with the roomId:${roomId} does not exists`);
         };
         this.createRoom = (roomId, router, redisService) => {
-            const room = new room_1.Room(router, roomId, redisService);
+            const room = new Room(router, roomId, redisService);
             this.rooms.set(roomId, room);
             this.routers.set(roomId, router);
             return room;
         };
         this.deleteRoom = (roomId) => {
             const room = this.getRoom(roomId);
-            room === null || room === void 0 ? void 0 : room.closeRoom();
+            room?.closeRoom();
             this.rooms.delete(roomId);
         };
     }
 }
-exports.RoomManager = RoomManager;

@@ -1,7 +1,7 @@
 // conferenceRoom.tsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMediasoup } from "./hooks/useMediasoup";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { isHostAtom, userIdAtom, usernameAtom } from "@/store";
@@ -11,13 +11,22 @@ import { Controls } from "./Controls";
 import { VideoRenderer } from "./VideoRenderer";
 import { useRooms } from "./hooks/useRooms";
 import { UserDetails } from "@/types";
+import { ExternalMediaModal } from "./ExternalMediaModal";
 
 export function ConferenceRoom() {
   const [userId] = useAtom(userIdAtom);
   const [username] = useAtom(usernameAtom);
   const [isHost] = useAtom(isHostAtom);
 
-  useWebSocket();
+  const [showExternalMediaModal, setShowExternalMediaModal] =
+    useState<boolean>(false);
+
+  const {
+    externalMediaUrl,
+    setExternalMediaUrl,
+    handleRemoveExternalMedia,
+    mediaKey,
+  } = useWebSocket();
   const { joinedStatus, participants } = useRooms();
 
   const {
@@ -63,6 +72,12 @@ export function ConferenceRoom() {
 
   return (
     <main className="relative h-screen w-screen overflow-hidden">
+      <ExternalMediaModal
+        setShowExternalMediaModal={setShowExternalMediaModal}
+        showExternalMediaModal={showExternalMediaModal}
+        setExternalMediaUrl={setExternalMediaUrl}
+      ></ExternalMediaModal>
+
       {/* Controls overlay */}
       <div className="absolute h-[10%] w-[70%] bottom-0 left-[15%] z-[100]">
         <Controls
@@ -75,6 +90,7 @@ export function ConferenceRoom() {
           turnOffMic={turnOffMic}
           handleExitOrEndRoom={handleExitOrEndRoom}
           userDetails={participants.get(userId) as UserDetails}
+          setShowExternalMediaModal={setShowExternalMediaModal}
         />
       </div>
 
@@ -90,6 +106,9 @@ export function ConferenceRoom() {
         participants={participants}
         sendScreen={sendScreen}
         turnOffScreen={turnOffScreen}
+        externalMediaUrl={externalMediaUrl}
+        handleRemoveExternalMedia={handleRemoveExternalMedia}
+        mediaKey={mediaKey}
       />
     </main>
   );

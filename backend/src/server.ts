@@ -1,14 +1,13 @@
 import dotenv from "dotenv";
-
 import express from "express";
 import redis, { Redis } from "ioredis";
-import RedisService from "./redis/redisClient";
-import { createRootRouter } from "./routes";
-import { WebSocketClient } from "./websocket/websocketclient";
+import RedisService from "./redis/redisClient.js";
+import { createRootRouter } from "./routes/index.js";
+import { WebSocketClient } from "./websocket/websocketclient.js";
 import cors from "cors";
-import { RoomManager } from "./rooms/roomManager";
-import { MediaSoupService } from "./medisoup/mediasoupService";
-import { logger } from "./utils/logger";
+import { RoomManager } from "./rooms/roomManager.js";
+import { logger } from "./utils/logger.js";
+import { MediaSoupService } from "./medisoup/mediasoupService.js";
 
 dotenv.config();
 

@@ -1,23 +1,17 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.Participant = void 0;
-const mediasoup_config_1 = require("../../medisoup/config/mediasoup.config");
-const logger_1 = require("../../utils/logger");
-class Participant {
+import { mediasoupConfig } from "../../medisoup/config/mediasoup.config.js";
+import { logger } from "../../utils/logger.js";
+export class Participant {
     constructor(userId, room, ws, username, isHost) {
         this.producer = new Map();
         this.consumer = new Map();
+        this.sendRoomDetails = async ({ userId, payload }) => {
+            const roomDetails = await this.room.getRoomDetails();
+            this.wsClient.send(this.userId, "roomDetails", {
+                roomDetails: roomDetails,
+            });
+        };
         this.getRtpCapabilities = ({ userId, payload }) => {
-            logger_1.logger.info(`Request for RTP capabilities from user ${userId}`, {
+            logger.info(`Request for RTP capabilities from user ${userId}`, {
                 label: "Participant",
             });
             this.wsClient.send(userId, "rtpCapabilities", {
@@ -27,31 +21,31 @@ class Participant {
         this.saveUserRtpCapabilities = ({ userId, payload }) => {
             const { rtpCapabilities } = payload;
             if (!rtpCapabilities) {
-                logger_1.logger.warn(`No RTP capabilities provided by user ${userId}`, {
+                logger.warn(`No RTP capabilities provided by user ${userId}`, {
                     label: "Participant",
                 });
                 return;
             }
             /* Saving the Client's Rtp Capabilities to reduce extra overhead */
             this.rtpCapabilities = rtpCapabilities;
-            logger_1.logger.debug(`Saved RTP capabilities for user ${userId}`, {
+            logger.debug(`Saved RTP capabilities for user ${userId}`, {
                 label: "Participant",
             });
         };
-        this.createTransport = (_a) => __awaiter(this, [_a], void 0, function* ({ userId, payload }) {
+        this.createTransport = async ({ userId, payload }) => {
             const router = this.room.getRouter();
             try {
                 const { direction } = payload;
                 if (!direction || (direction !== "recv" && direction !== "send")) {
-                    logger_1.logger.error(`Invalid transport direction: ${direction}`, {
+                    logger.error(`Invalid transport direction: ${direction}`, {
                         label: "Participant",
                     });
                     throw new Error("Invalid transport direction");
                 }
-                logger_1.logger.debug(`Creating ${direction} transport for user ${userId}`, {
+                logger.debug(`Creating ${direction} transport for user ${userId}`, {
                     label: "Participant",
                 });
-                const transport = yield router.createWebRtcTransport(mediasoup_config_1.mediasoupConfig.webRtcTransport);
+                const transport = await router.createWebRtcTransport(mediasoupConfig.webRtcTransport);
                 if (direction === "recv") {
                     this.recvTransport = transport;
                 }
@@ -68,13 +62,13 @@ class Participant {
                     direction: direction,
                     transportInfo,
                 });
-                logger_1.logger.info(`Transport ${direction} created successfully for user ${userId}`, {
+                logger.info(`Transport ${direction} created successfully for user ${userId}`, {
                     label: "Participant",
                     transportId: transport.id,
                 });
             }
             catch (error) {
-                logger_1.logger.error(`Error creating ${payload.direction} transport for user ${userId}: ${error}`, {
+                logger.error(`Error creating ${payload.direction} transport for user ${userId}: ${error}`, {
                     label: "Participant",
                     error,
                 });
@@ -84,24 +78,24 @@ class Participant {
                     message,
                 });
             }
-        });
-        this.connectTransport = (_a) => __awaiter(this, [_a], void 0, function* ({ userId, payload }) {
+        };
+        this.connectTransport = async ({ userId, payload }) => {
             try {
                 const { direction, dtlsParameters } = payload;
                 this.ensureTransportInitialized(direction);
                 const transport = this.getTransport(direction);
-                transport === null || transport === void 0 ? void 0 : transport.connect({ dtlsParameters });
+                transport?.connect({ dtlsParameters });
                 this.wsClient.send(userId, "transport-connected", {
                     transportId: transport.id,
                     direction,
                 });
-                logger_1.logger.info(`Transport ${transport.id} connected for user ${userId}`, {
+                logger.info(`Transport ${transport.id} connected for user ${userId}`, {
                     label: "Participant",
                     direction,
                 });
             }
             catch (error) {
-                logger_1.logger.error(`Error connecting ${payload.direction} transport for user ${userId}: ${error}`, {
+                logger.error(`Error connecting ${payload.direction} transport for user ${userId}: ${error}`, {
                     label: "Participant",
                     error,
                 });
@@ -111,20 +105,20 @@ class Participant {
                     message,
                 });
             }
-        });
-        this.createProducer = (_a) => __awaiter(this, [_a], void 0, function* ({ userId, payload }) {
+        };
+        this.createProducer = async ({ userId, payload }) => {
             try {
                 this.ensureTransportInitialized("send");
                 const { kind, rtpParameters, producerData } = payload;
                 const transport = this.sendTransport;
-                logger_1.logger.debug(`Creating producer of kind ${kind} for user ${userId}`, {
+                logger.debug(`Creating producer of kind ${kind} for user ${userId}`, {
                     label: "Participant",
                     producerData,
                 });
-                const producer = yield transport.produce({
+                const producer = await transport.produce({
                     kind,
                     rtpParameters,
-                    appData: Object.assign({}, producerData),
+                    appData: { ...producerData },
                 });
                 this.producer.set(producer.id, producer);
                 // this is for broadcasting
@@ -133,7 +127,7 @@ class Participant {
                     producerId: producer.id,
                 });
                 producer.on("transportclose", () => {
-                    logger_1.logger.info(`Producer ${producer.id} transport closed`, {
+                    logger.info(`Producer ${producer.id} transport closed`, {
                         label: "Participant",
                         producerId: producer.id,
                     });
@@ -150,7 +144,7 @@ class Participant {
                     });
                 });
                 producer.on("@close", () => {
-                    logger_1.logger.info(`Producer ${producer.id} closed`, {
+                    logger.info(`Producer ${producer.id} closed`, {
                         label: "Participant",
                         producerId: producer.id,
                     });
@@ -166,14 +160,14 @@ class Participant {
                         },
                     });
                 });
-                logger_1.logger.info(`New ${kind} producer created for user ${userId}`, {
+                logger.info(`New ${kind} producer created for user ${userId}`, {
                     label: "Participant",
                     producerId: producer.id,
                     kind,
                 });
             }
             catch (error) {
-                logger_1.logger.error(`Error creating producer for user ${userId}: ${error}`, {
+                logger.error(`Error creating producer for user ${userId}: ${error}`, {
                     label: "Participant",
                     error,
                 });
@@ -182,9 +176,9 @@ class Participant {
                     message: "Couldn't Producer the Media",
                 });
             }
-        });
+        };
         this.broadcastNewProducer = (producer, producerType) => {
-            logger_1.logger.debug(`Broadcasting new producer ${producer.id} of type ${producerType}`, {
+            logger.debug(`Broadcasting new producer ${producer.id} of type ${producerType}`, {
                 label: "Participant",
                 producerId: producer.id,
                 producerType,
@@ -204,39 +198,39 @@ class Participant {
                 });
             });
         };
-        this.createConsumer = (_a) => __awaiter(this, [_a], void 0, function* ({ userId, payload }) {
+        this.createConsumer = async ({ userId, payload }) => {
             try {
                 const router = this.room.getRouter();
                 this.ensureTransportInitialized("recv");
                 const { producerId, rtpCapabilities, producerType, producerUserId, producerUsername, } = payload;
-                logger_1.logger.debug(`Creating consumer for producer ${producerId} for user ${userId}`, {
+                logger.debug(`Creating consumer for producer ${producerId} for user ${userId}`, {
                     label: "Participant",
                     producerId,
                 });
                 // Check if client can consume this producer
                 if (!router.canConsume({ producerId, rtpCapabilities })) {
-                    logger_1.logger.warn(`User ${userId} cannot consume producer ${producerId}`, {
+                    logger.warn(`User ${userId} cannot consume producer ${producerId}`, {
                         label: "Participant",
                         producerId,
                     });
                     throw new Error("Client cannot consume this producer");
                 }
                 const recvTransport = this.recvTransport;
-                const consumer = yield recvTransport.consume({
+                const consumer = await recvTransport.consume({
                     producerId,
                     rtpCapabilities,
                     paused: true,
                 });
                 this.consumer.set(consumer.id, consumer);
                 consumer.on("transportclose", () => {
-                    logger_1.logger.info(`Consumer ${consumer.id} transport closed`, {
+                    logger.info(`Consumer ${consumer.id} transport closed`, {
                         label: "Participant",
                         consumerId: consumer.id,
                     });
                     this.consumer.delete(consumer.id);
                 });
                 consumer.on("@close", () => {
-                    logger_1.logger.info(`Consumer ${consumer.id} closed`, {
+                    logger.info(`Consumer ${consumer.id} closed`, {
                         label: "Participant",
                         consumerId: consumer.id,
                     });
@@ -251,14 +245,14 @@ class Participant {
                         appData: { type: producerType, producerUserId, producerUsername },
                     },
                 });
-                logger_1.logger.info(`Created new consumer ${consumer.id} for user ${userId}`, {
+                logger.info(`Created new consumer ${consumer.id} for user ${userId}`, {
                     label: "Participant",
                     consumerId: consumer.id,
                     producerId,
                 });
             }
             catch (error) {
-                logger_1.logger.error(`Error creating consumer for user ${userId}: ${error}`, {
+                logger.error(`Error creating consumer for user ${userId}: ${error}`, {
                     label: "Participant",
                     error,
                 });
@@ -268,12 +262,12 @@ class Participant {
                 });
                 throw new Error("Error while creating the consumer");
             }
-        });
-        this.resumeConsumer = (_a) => __awaiter(this, [_a], void 0, function* ({ userId, payload: { consumerId } }) {
+        };
+        this.resumeConsumer = async ({ userId, payload: { consumerId } }) => {
             try {
                 const consumer = this.consumer.get(consumerId);
                 if (!consumer) {
-                    logger_1.logger.warn(`Consumer ${consumerId} not found for user ${userId}`, {
+                    logger.warn(`Consumer ${consumerId} not found for user ${userId}`, {
                         label: "Participant",
                         consumerId,
                     });
@@ -283,17 +277,17 @@ class Participant {
                     });
                     return;
                 }
-                yield consumer.resume();
+                await consumer.resume();
                 this.wsClient.send(userId, "consumer-resumed", {
                     consumerId: consumer.id,
                 });
-                logger_1.logger.info(`Resumed consumer ${consumer.id} for user ${userId}`, {
+                logger.info(`Resumed consumer ${consumer.id} for user ${userId}`, {
                     label: "Participant",
                     consumerId: consumer.id,
                 });
             }
             catch (error) {
-                logger_1.logger.error(`Error resuming consumer ${consumerId} for user ${userId}: ${error}`, {
+                logger.error(`Error resuming consumer ${consumerId} for user ${userId}: ${error}`, {
                     label: "Participant",
                     consumerId,
                     error,
@@ -303,7 +297,7 @@ class Participant {
                     message: "Failed to resume consumer",
                 });
             }
-        });
+        };
         this.getTransport = (direction) => {
             if (direction === "recv") {
                 return this.recvTransport;
@@ -316,21 +310,21 @@ class Participant {
             if (direction === "recv") {
                 if (!this.recvTransport) {
                     const error = `Recv Transport for user with userId:${this.userId} is not initialized`;
-                    logger_1.logger.error(error, { label: "Participant" });
+                    logger.error(error, { label: "Participant" });
                     throw new Error(error);
                 }
             }
             if (direction === "send") {
                 if (!this.sendTransport) {
                     const error = `Send Transport for user with userId:${this.userId} is not initialized`;
-                    logger_1.logger.error(error, { label: "Participant" });
+                    logger.error(error, { label: "Participant" });
                     throw new Error(error);
                 }
             }
         };
         this.removeProducer = ({ userId, payload }) => {
             const { producerId, type } = payload;
-            logger_1.logger.info(`Removing producer ${producerId} of type ${type}`, {
+            logger.info(`Removing producer ${producerId} of type ${type}`, {
                 label: "Participant",
                 producerId,
                 type,
@@ -348,26 +342,26 @@ class Participant {
                 },
             });
         };
-        this.sendStreams = (_a) => __awaiter(this, [_a], void 0, function* ({ userId, payload }) {
+        this.sendStreams = async ({ userId, payload }) => {
             const participants = this.room.getOtherParticipants({
                 userId: this.userId,
             });
             if (participants.length < 1) {
-                logger_1.logger.debug(`No other participants to send streams to for user ${userId}`, {
+                logger.debug(`No other participants to send streams to for user ${userId}`, {
                     label: "Participant",
                 });
                 return;
             }
             const { rtpCapabilities } = payload;
-            logger_1.logger.debug(`Sending streams to user ${userId} from ${participants.length} participants`, {
+            logger.debug(`Sending streams to user ${userId} from ${participants.length} participants`, {
                 label: "Participant",
             });
-            logger_1.logger.info(`Total Participants Present are ${participants.length}`);
+            logger.info(`Total Participants Present are ${participants.length}`);
             for (let i = 0; i < participants.length; i++) {
                 const participantProducers = Array.from(participants[i].producer.values());
-                logger_1.logger.info(`Total producer for participant ${i} is ${participantProducers.length}`);
+                logger.info(`Total producer for participant ${i} is ${participantProducers.length}`);
                 for (let j = 0; j < participantProducers.length; j++) {
-                    yield this.createConsumer({
+                    await this.createConsumer({
                         userId: this.userId,
                         payload: {
                             producerId: participantProducers[j].id,
@@ -379,8 +373,8 @@ class Participant {
                     });
                 }
             }
-        });
-        this.endCall = (_a) => __awaiter(this, [_a], void 0, function* ({ userId, payload }) {
+        };
+        this.endCall = async ({ userId, payload }) => {
             if (!this.isHost) {
                 this.wsClient.send(userId, "not-allowed", {
                     code: "NOT_ALLOWED",
@@ -388,7 +382,7 @@ class Participant {
                 });
                 return;
             }
-            logger_1.logger.info(`Host ${this.userId} is ending the call`, {
+            logger.info(`Host ${this.userId} is ending the call`, {
                 label: "Participant",
             });
             // Notify all participants
@@ -403,9 +397,9 @@ class Participant {
             this.close();
             // Close the entire room
             this.room.closeRoom();
-        });
-        this.exitRoom = (_a) => __awaiter(this, [_a], void 0, function* ({ userId, payload }) {
-            logger_1.logger.info(`Participant ${this.userId} is exiting the room`, {
+        };
+        this.exitRoom = async ({ userId, payload }) => {
+            logger.info(`Participant ${this.userId} is exiting the room`, {
                 label: "Participant",
             });
             // Notify other participants
@@ -422,15 +416,37 @@ class Participant {
             // Close all resources
             this.close();
             // Remove from room
-            yield this.room.removeParticipant(this.userId);
-        });
+            await this.room.removeParticipant(this.userId);
+        };
+        this.handleLoadExternalMedia = async ({ userId, payload }) => {
+            const { url } = payload;
+            logger.info(`Request for the loading external media: ${url}`);
+            logger.info(`Broadcasting the url in the whole room`);
+            this.wsClient.broadCastMessage({
+                userIds: this.room.getOtherParticipantsUserId({ userId: userId }),
+                type: "load-external-media",
+                payload: {
+                    url: url,
+                },
+            });
+            await this.room.saveExternalMedia({ url });
+        };
+        this.handleRemoveExternalMedia = async ({ userId, payload }) => {
+            logger.info(`Request for removing External Media`);
+            this.wsClient.broadCastMessage({
+                userIds: this.room.getOtherParticipantsUserId({ userId: userId }),
+                type: "unload-external-media",
+                payload: "",
+            });
+            await this.room.removeExternalMedia();
+        };
         this.close = () => {
-            logger_1.logger.info(`Closing all resources for participant ${this.userId}`, {
+            logger.info(`Closing all resources for participant ${this.userId}`, {
                 label: "Participant",
             });
             // Close all producers
             this.producer.forEach((producer) => {
-                logger_1.logger.debug(`Closing producer ${producer.id}`, {
+                logger.debug(`Closing producer ${producer.id}`, {
                     label: "Participant",
                     producerId: producer.id,
                 });
@@ -448,7 +464,7 @@ class Participant {
             this.producer.clear();
             // Close all consumers
             this.consumer.forEach((consumer) => {
-                logger_1.logger.debug(`Closing consumer ${consumer.id}`, {
+                logger.debug(`Closing consumer ${consumer.id}`, {
                     label: "Participant",
                     consumerId: consumer.id,
                 });
@@ -457,7 +473,7 @@ class Participant {
             this.consumer.clear();
             // Close transports
             if (this.sendTransport) {
-                logger_1.logger.debug(`Closing send transport ${this.sendTransport.id}`, {
+                logger.debug(`Closing send transport ${this.sendTransport.id}`, {
                     label: "Participant",
                     transportId: this.sendTransport.id,
                 });
@@ -465,7 +481,7 @@ class Participant {
                 this.sendTransport = undefined;
             }
             if (this.recvTransport) {
-                logger_1.logger.debug(`Closing recv transport ${this.recvTransport.id}`, {
+                logger.debug(`Closing recv transport ${this.recvTransport.id}`, {
                     label: "Participant",
                     transportId: this.recvTransport.id,
                 });
@@ -476,9 +492,10 @@ class Participant {
             this.disableParticipant();
         };
         this.initializeParticipant = () => {
-            logger_1.logger.debug(`Initializing participant ${this.userId}`, {
+            logger.debug(`Initializing participant ${this.userId}`, {
                 label: "Participant",
             });
+            this.wsClient.on("get-roomDetails", this.sendRoomDetails, this.userId);
             this.wsClient.on("send-rtpCapabilities", this.getRtpCapabilities, this.userId);
             this.wsClient.on("device-rtpCapabilities", this.saveUserRtpCapabilities, this.userId);
             this.wsClient.on("create-transport", this.createTransport, this.userId);
@@ -490,6 +507,9 @@ class Participant {
             this.wsClient.on("remove-producer", this.removeProducer, this.userId);
             this.wsClient.on("exit-room", this.exitRoom, this.userId);
             this.wsClient.on("end-call", this.endCall, this.userId);
+            this.wsClient.on("external-media", this.handleLoadExternalMedia, this.userId);
+            this.wsClient.on("remove-external-media", this.handleRemoveExternalMedia, this.userId);
+            this.wsClient.send(this.userId, "client-loaded", "");
         };
         this.disableParticipant = () => {
             this.wsClient.off("send-rtpCapabilities", this.getRtpCapabilities, this.userId);
@@ -503,16 +523,18 @@ class Participant {
             this.wsClient.off("remove-producer", this.removeProducer, this.userId);
             this.wsClient.off("exit-room", this.exitRoom, this.userId);
             this.wsClient.off("end-call", this.endCall, this.userId);
+            this.wsClient.off("external-media", this.handleLoadExternalMedia, this.userId);
+            this.wsClient.off("remove-external-media", this.handleRemoveExternalMedia, this.userId);
+            this.wsClient.off("get-roomDetails", this.sendRoomDetails, this.userId);
         };
         this.userId = userId;
         this.room = room;
         this.wsClient = ws;
         this.username = username;
         this.isHost = isHost;
-        logger_1.logger.debug(`Creating new participant ${username} (${userId})`, {
+        logger.debug(`Creating new participant ${username} (${userId})`, {
             label: "Participant",
         });
         this.initializeParticipant();
     }
 }
-exports.Participant = Participant;

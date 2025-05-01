@@ -133,7 +133,7 @@ export class MediasoupClient {
     mediaStream: MediaStream,
     producerType: "camera" | "screen"
   ) => {
-    const videoTracks = mediaStream.getAudioTracks();
+    const videoTracks = mediaStream.getVideoTracks();
 
     if (videoTracks.length === 0) {
       console.error(`No audio tracks found for ${producerType}`);

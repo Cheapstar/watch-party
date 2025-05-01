@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import React from "react";
@@ -11,6 +12,8 @@ import {
 } from "react-icons/md";
 import { RemoteMedia, UserDetails } from "@/types";
 import { AudioVisualizer } from "./AudioVisualizer";
+import { YTPlayer } from "./YTPlayer";
+import { YouTubePlayerWrapper } from "./YTPlayerWrapper";
 type VideoRenderProps = {
   userId: string;
   userCameraStream: MediaStream | undefined;
@@ -22,6 +25,9 @@ type VideoRenderProps = {
   participants: Map<string, UserDetails>;
   sendScreen: () => Promise<void>;
   turnOffScreen: () => void;
+  externalMediaUrl: string;
+  handleRemoveExternalMedia: () => void;
+  mediaKey?: number;
 };
 
 /*
@@ -64,10 +70,14 @@ export function VideoRenderer({
   participants,
   sendScreen,
   turnOffScreen,
+  externalMediaUrl,
+  handleRemoveExternalMedia,
+  mediaKey = 0,
 }: VideoRenderProps) {
   const totalParticipants = participants.size;
   const localAudioVideoStream = new MediaStream();
   const [isScreenShared, setIsScreenShared] = useState<boolean>(false);
+  const hasExternalMedia = !!externalMediaUrl;
 
   // Check if screen is being shared (either local or remote)
   let remoteScreenStream: MediaStream | undefined = undefined;
@@ -101,9 +111,12 @@ export function VideoRenderer({
     localAudioVideoStream.addTrack(userMicrophoneStream.getTracks()[0]);
   }
 
-  // Calculate the grid layout based on participants count and screen sharing
+  // Calculate the grid layout based on participants count, screen sharing, and external media
   const getGridContainerStyle = () => {
-    if (isScreenShared) {
+    if (hasExternalMedia) {
+      // When YouTube video is present, force a specific layout
+      return "grid-cols-4";
+    } else if (isScreenShared) {
       if (totalParticipants === 1) return "grid-cols-1";
       if (totalParticipants === 2) return "grid-cols-1";
       if (totalParticipants <= 4) return "grid-cols-4";
@@ -123,24 +136,38 @@ export function VideoRenderer({
       <div
         className={`grid ${getGridContainerStyle()} gap-4 h-full auto-rows-fr z-0`}
       >
-        {/* Always render ScreenShareBlock, but with different states based on sharing status */}
-        <ScreenShareBlock
-          mediaStream={userScreenStream || remoteScreenStream}
-          participantDetails={
-            userScreenStream
-              ? (participants.get(userId) as UserDetails)
-              : remoteScreenSenderId
-              ? (participants.get(remoteScreenSenderId) as UserDetails)
-              : (participants.get(userId) as UserDetails)
-          }
-          sendScreen={sendScreen}
-          turnOffScreen={turnOffScreen}
-          isSender={!!userScreenStream}
-          isScreenShared={isScreenShared}
-        />
+        {/* YouTube Player - takes priority if present */}
+        {hasExternalMedia && (
+          <YouTubePlayerWrapper
+            url={externalMediaUrl}
+            handleRemoveExternalMedia={handleRemoveExternalMedia}
+            mediaKey={mediaKey}
+          />
+        )}
+
+        {/* Screen sharing block - only show if no YouTube video or alongside it */}
+        {(!hasExternalMedia || (hasExternalMedia && isScreenShared)) && (
+          <ScreenShareBlock
+            mediaStream={userScreenStream || remoteScreenStream}
+            participantDetails={
+              userScreenStream
+                ? (participants.get(userId) as UserDetails)
+                : remoteScreenSenderId
+                ? (participants.get(remoteScreenSenderId) as UserDetails)
+                : (participants.get(userId) as UserDetails)
+            }
+            sendScreen={sendScreen}
+            turnOffScreen={turnOffScreen}
+            isSender={!!userScreenStream}
+            isScreenShared={isScreenShared}
+            className={
+              hasExternalMedia ? "col-span-1" : "col-span-3 row-span-2"
+            }
+          />
+        )}
 
         {/* User's own video */}
-        <div className={isScreenShared ? "col-span-1" : ""}>
+        <div className={isScreenShared || hasExternalMedia ? "col-span-1" : ""}>
           <UserMediaBlock
             mediaStream={localAudioVideoStream}
             participantDetails={participants.get(userId) as UserDetails}
@@ -166,7 +193,9 @@ export function VideoRenderer({
             return (
               <div
                 key={id}
-                className={isScreenShared ? "col-span-1" : ""}
+                className={
+                  isScreenShared || hasExternalMedia ? "col-span-1" : ""
+                }
               >
                 <UserMediaBlock
                   mediaStream={mediaStream}
@@ -335,6 +364,7 @@ function ScreenShareBlock({
   turnOffScreen,
   isSender,
   isScreenShared,
+  className,
 }: {
   participantDetails: UserDetails;
   sendScreen: () => Promise<void>;
@@ -342,6 +372,7 @@ function ScreenShareBlock({
   mediaStream?: MediaStream;
   isSender: boolean;
   isScreenShared: boolean;
+  className?: string;
 }) {
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [showControls, setShowControls] = useState<boolean>(false);
@@ -378,19 +409,16 @@ function ScreenShareBlock({
     setMuted((m) => !m);
   }
 
-  // If screen is shared, this block should take up more space
-  const containerClasses = isScreenShared ? "col-span-3 row-span-2" : "";
-
   return (
     <div
       ref={containerRef}
-      className={`w-full h-full rounded-lg overflow-hidden relative bg-gray-800 ${containerClasses}`}
+      className={`w-full h-full rounded-lg overflow-hidden relative bg-gray-800 ${className}`}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >
       {isScreenShared && (
         <div className="absolute bottom-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded z-10">
-          {participantDetails.userName}'s screen
+          {participantDetails.userName}&apos;s screen
         </div>
       )}
 

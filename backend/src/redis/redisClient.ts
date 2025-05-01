@@ -1,7 +1,7 @@
 import Redis from "ioredis";
-import { RoomDetails } from "../rooms/rooms.types";
-import { UserDetails } from "./types";
-import { logger } from "../utils/logger";
+import { RoomDetails } from "../rooms/rooms.types.js";
+import { UserDetails } from "./types.js";
+import { logger } from "../utils/logger.js";
 import { nanoid } from "nanoid";
 
 export class RoomNotFoundError extends Error {
@@ -14,7 +14,7 @@ export class RoomNotFoundError extends Error {
 export default class RedisService {
   private redisClient: Redis;
   private getKey = {
-    rooms: (roomId: string) => `rooms:${roomId}`,
+    rooms: () => `rooms`,
     members: (roomId: string) => `members:${roomId}`,
   };
 
@@ -30,11 +30,7 @@ export default class RedisService {
       const roomId = nanoid();
 
       const multi = this.redisClient.multi();
-      multi.hset(
-        this.getKey.rooms(roomId),
-        roomId,
-        JSON.stringify(roomDetails)
-      );
+      multi.hset(this.getKey.rooms(), roomId, JSON.stringify(roomDetails));
       multi.hset(
         this.getKey.members(roomId),
         userDetails.userId,
@@ -109,11 +105,32 @@ export default class RedisService {
     try {
       const multi = this.redisClient.multi();
       multi.del(this.getKey.members(roomId));
-      multi.del(this.getKey.rooms(roomId));
+      multi.hdel(this.getKey.rooms(), roomId);
       await multi.exec();
       logger.info(`Room ${roomId} and its members were deleted`);
     } catch (error) {
       logger.error(`Error deleting room ${roomId}`, { error });
+      throw error;
+    }
+  };
+
+  saveRoom = async (roomId: string, roomDetails: RoomDetails) => {
+    try {
+      logger.info(`Saving the room with roomId:${roomId}`);
+      await this.ensureRoomExists(roomId);
+      const response = this.redisClient.hset(
+        this.getKey.rooms(),
+        roomId,
+        JSON.stringify(roomDetails)
+      );
+
+      if (!response) {
+        throw new Error("Could not save the roomDetails");
+      }
+
+      logger.info(`Room Details for the room :${roomId} successfully saved`);
+    } catch (error) {
+      logger.error(`Error Occured While Saving the Room in the redis`);
       throw error;
     }
   };
@@ -131,8 +148,7 @@ export default class RedisService {
   };
 
   roomExists = async (roomId: string) => {
-    const exists =
-      (await this.redisClient.exists(this.getKey.rooms(roomId))) === 1;
+    const exists = (await this.redisClient.exists(this.getKey.rooms())) === 1;
     logger.debug(`Room ${roomId} exists: ${exists}`);
     return exists;
   };
@@ -140,10 +156,7 @@ export default class RedisService {
   getRoomDetails = async (roomId: string) => {
     try {
       await this.ensureRoomExists(roomId);
-      const res = await this.redisClient.hget(
-        this.getKey.rooms(roomId),
-        roomId
-      );
+      const res = await this.redisClient.hget(this.getKey.rooms(), roomId);
       if (!res) throw new Error(`Room details for ${roomId} not found`);
       logger.info(`Fetched room details for ${roomId}`);
       return JSON.parse(res);

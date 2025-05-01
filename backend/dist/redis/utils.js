@@ -1,8 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.createUserDetails = createUserDetails;
-exports.userDto = userDto;
-function createUserDetails(userId, userName, isHost) {
+export function createUserDetails(userId, userName, isHost) {
     return {
         userId,
         userName,
@@ -18,6 +14,8 @@ function createUserDetails(userId, userName, isHost) {
         },
     };
 }
-function userDto(usd) {
-    return Object.assign({}, usd);
+export function userDto(usd) {
+    return {
+        ...usd,
+    };
 }

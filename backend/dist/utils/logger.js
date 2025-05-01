@@ -1,11 +1,5 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.logger = void 0;
-const winston_1 = __importDefault(require("winston"));
-const { combine, printf, errors, timestamp } = winston_1.default.format;
+import winston from "winston";
+const { combine, printf, errors, timestamp } = winston.format;
 // Define colors manually
 const levelStyles = {
     info: "\x1b[44m\x1b[37m", // Blue background, White text
@@ -19,8 +13,8 @@ const logFormat = printf(({ level, message, timestamp }) => {
     const paddedLevel = ` ${level.toUpperCase()} `; // add padding around the text for nicer box
     return `${timestamp} ${color}${paddedLevel}${reset} ${message}`;
 });
-exports.logger = winston_1.default.createLogger({
+export const logger = winston.createLogger({
     level: process.env.NODE_ENV === "production" ? "info" : "debug",
     format: combine(timestamp({ format: "YYYY-MM-DD HH:mm:ss" }), errors({ stack: true }), logFormat),
-    transports: [new winston_1.default.transports.Console()],
+    transports: [new winston.transports.Console()],
 });

@@ -1,6 +1,6 @@
-import { Router } from "mediasoup/node/lib/types";
-import { Room } from "./room";
-import RedisService from "../redis/redisClient";
+import { Room } from "./room.js";
+import RedisService from "../redis/redisClient.js";
+import { Router } from "mediasoup/types";
 
 export class RoomManager {
   public rooms: Map<string, Room> = new Map();

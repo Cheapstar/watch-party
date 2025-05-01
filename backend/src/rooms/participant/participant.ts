@@ -1,9 +1,13 @@
-import { Consumer, Producer, RtpCapabilities } from "mediasoup/node/lib/types";
-import { WebRtcTransport } from "mediasoup/node/lib/WebRtcTransportTypes";
-import { Room } from "../room";
-import { WebSocketClient } from "../../websocket/websocketclient";
-import { mediasoupConfig } from "../../medisoup/config/mediasoup.config";
-import { logger } from "../../utils/logger";
+import { Room } from "../room.js";
+import { WebSocketClient } from "../../websocket/websocketclient.js";
+import { mediasoupConfig } from "../../medisoup/config/mediasoup.config.js";
+import { logger } from "../../utils/logger.js";
+import {
+  Consumer,
+  Producer,
+  RtpCapabilities,
+  WebRtcTransport,
+} from "mediasoup/types";
 
 export class Participant {
   public sendTransport?: WebRtcTransport;
@@ -35,6 +39,13 @@ export class Participant {
     });
     this.initializeParticipant();
   }
+
+  sendRoomDetails = async ({ userId, payload }: Args) => {
+    const roomDetails = await this.room.getRoomDetails();
+    this.wsClient.send(this.userId, "roomDetails", {
+      roomDetails: roomDetails,
+    });
+  };
 
   getRtpCapabilities = ({ userId, payload }: Args) => {
     logger.info(`Request for RTP capabilities from user ${userId}`, {
@@ -561,6 +572,30 @@ export class Participant {
     await this.room.removeParticipant(this.userId);
   };
 
+  handleLoadExternalMedia = async ({ userId, payload }: Args) => {
+    const { url } = payload;
+    logger.info(`Request for the loading external media: ${url}`);
+    logger.info(`Broadcasting the url in the whole room`);
+    this.wsClient.broadCastMessage({
+      userIds: this.room.getOtherParticipantsUserId({ userId: userId }),
+      type: "load-external-media",
+      payload: {
+        url: url,
+      },
+    });
+    await this.room.saveExternalMedia({ url });
+  };
+
+  handleRemoveExternalMedia = async ({ userId, payload }: Args) => {
+    logger.info(`Request for removing External Media`);
+    this.wsClient.broadCastMessage({
+      userIds: this.room.getOtherParticipantsUserId({ userId: userId }),
+      type: "unload-external-media",
+      payload: "",
+    });
+    await this.room.removeExternalMedia();
+  };
+
   close = () => {
     logger.info(`Closing all resources for participant ${this.userId}`, {
       label: "Participant",
@@ -624,6 +659,7 @@ export class Participant {
       label: "Participant",
     });
 
+    this.wsClient.on("get-roomDetails", this.sendRoomDetails, this.userId);
     this.wsClient.on(
       "send-rtpCapabilities",
       this.getRtpCapabilities,
@@ -645,6 +681,18 @@ export class Participant {
     this.wsClient.on("remove-producer", this.removeProducer, this.userId);
     this.wsClient.on("exit-room", this.exitRoom, this.userId);
     this.wsClient.on("end-call", this.endCall, this.userId);
+    this.wsClient.on(
+      "external-media",
+      this.handleLoadExternalMedia,
+      this.userId
+    );
+    this.wsClient.on(
+      "remove-external-media",
+      this.handleRemoveExternalMedia,
+      this.userId
+    );
+
+    this.wsClient.send(this.userId, "client-loaded", "");
   };
 
   private disableParticipant = () => {
@@ -669,6 +717,17 @@ export class Participant {
     this.wsClient.off("remove-producer", this.removeProducer, this.userId);
     this.wsClient.off("exit-room", this.exitRoom, this.userId);
     this.wsClient.off("end-call", this.endCall, this.userId);
+    this.wsClient.off(
+      "external-media",
+      this.handleLoadExternalMedia,
+      this.userId
+    );
+    this.wsClient.off(
+      "remove-external-media",
+      this.handleRemoveExternalMedia,
+      this.userId
+    );
+    this.wsClient.off("get-roomDetails", this.sendRoomDetails, this.userId);
   };
 }
 

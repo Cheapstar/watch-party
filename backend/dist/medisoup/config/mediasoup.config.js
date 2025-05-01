@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.mediasoupConfig = void 0;
-exports.mediasoupConfig = {
+export const mediasoupConfig = {
     worker: {
         rtcMinPort: 40000,
         rtcMaxPort: 49999,

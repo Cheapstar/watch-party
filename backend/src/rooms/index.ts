@@ -1,4 +1,4 @@
-import { RoomDetails, RoomSettings } from "./rooms.types";
+import { RoomDetails, RoomSettings } from "./rooms.types.js";
 
 export function createRoomDetails(
   userId: string,

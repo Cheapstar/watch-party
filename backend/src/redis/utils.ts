@@ -1,4 +1,4 @@
-import { UserDetails } from "./types";
+import { UserDetails } from "./types.js";
 
 export function createUserDetails(
   userId: string,

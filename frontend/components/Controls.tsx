@@ -4,20 +4,11 @@ import { MdMic, MdMicOff } from "react-icons/md";
 import { FiCamera, FiCameraOff } from "react-icons/fi";
 import { IoCall } from "react-icons/io5";
 import { MdOutlineExitToApp } from "react-icons/md";
+import { RiExternalLinkLine } from "react-icons/ri";
 
 import { UserDetails } from "@/types";
 
-export function Controls({
-  userCameraStream,
-  userMicrophoneStream,
-  sendCamera,
-  sendMicrophone,
-
-  turnOffCamera,
-  turnOffMic,
-  userDetails,
-  handleExitOrEndRoom,
-}: {
+interface props {
   userCameraStream: MediaStream | undefined;
   userMicrophoneStream: MediaStream | undefined;
   userScreenStream: MediaStream | undefined;
@@ -26,8 +17,21 @@ export function Controls({
   turnOffCamera: () => void;
   turnOffMic: () => void;
   handleExitOrEndRoom: (isHost: boolean) => void;
+  setShowExternalMediaModal: (v: boolean) => void;
   userDetails: UserDetails;
-}) {
+}
+
+export function Controls({
+  userCameraStream,
+  userMicrophoneStream,
+  sendCamera,
+  sendMicrophone,
+  setShowExternalMediaModal,
+  turnOffCamera,
+  turnOffMic,
+  userDetails,
+  handleExitOrEndRoom,
+}: props) {
   const [displayControls, setDisplayControls] = useState<boolean>(false);
 
   const handleCameraToggle = () => {
@@ -84,7 +88,16 @@ export function Controls({
               {userMicrophoneStream ? <MdMic></MdMic> : <MdMicOff></MdMicOff>}
             </button>
           </li>
-
+          <li>
+            <button
+              className={`text-white text-2xl py-4 px-3 hover:bg-[#1E3E62] rounded-md transition-all`}
+              onClick={() => {
+                setShowExternalMediaModal(true);
+              }}
+            >
+              <RiExternalLinkLine></RiExternalLinkLine>
+            </button>
+          </li>
           <li>
             <button
               className={`text-white text-2xl py-4 px-3  rounded-md transition-all 
