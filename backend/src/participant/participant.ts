@@ -1,14 +1,14 @@
-import { Room } from "../room.js";
-import { WebSocketClient } from "../../websocket/websocketclient.js";
-import { mediasoupConfig } from "../../medisoup/config/mediasoup.config.js";
-import { logger } from "../../utils/logger.js";
+import { Room } from "../rooms/room.js";
+import { WebSocketClient } from "../websocket/websocketclient.js";
+import { mediasoupConfig } from "../medisoup/config/mediasoup.config.js";
+import { logger } from "../utils/logger.js";
 import {
   Consumer,
   Producer,
   RtpCapabilities,
   WebRtcTransport,
 } from "mediasoup/types";
-import { MessageType } from "../../LiveChat/types.js";
+import { MessageType } from "../LiveChat/types.js";
 
 export class Participant {
   public sendTransport?: WebRtcTransport;

@@ -1,4 +1,4 @@
-import { Participant } from "./participant/participant.js";
+import { Participant } from "../participant/participant.js";
 
 import { logger } from "../utils/logger.js";
 import RedisService from "../redis/redisClient.js";

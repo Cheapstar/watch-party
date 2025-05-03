@@ -5,7 +5,7 @@ import { createUserDetails, userDto } from "../redis/utils.js";
 import { RoomManager } from "../rooms/roomManager.js";
 import { MediaSoupService } from "../medisoup/mediasoupService.js";
 import { Room } from "../rooms/room.js";
-import { Participant } from "../rooms/participant/participant.js";
+import { Participant } from "../participant/participant.js";
 import { WebSocketClient } from "../websocket/websocketclient.js";
 import { logger } from "../utils/logger.js";
 import { nanoid } from "nanoid";
