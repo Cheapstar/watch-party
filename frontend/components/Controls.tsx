@@ -5,6 +5,8 @@ import { FiCamera, FiCameraOff } from "react-icons/fi";
 import { IoCall } from "react-icons/io5";
 import { MdOutlineExitToApp } from "react-icons/md";
 import { RiExternalLinkLine } from "react-icons/ri";
+import { BsChatLeftText } from "react-icons/bs";
+import { MdOutlineLightMode, MdOutlineDarkMode } from "react-icons/md";
 
 import { UserDetails } from "@/types";
 
@@ -19,6 +21,9 @@ interface props {
   handleExitOrEndRoom: (isHost: boolean) => void;
   setShowExternalMediaModal: (v: boolean) => void;
   userDetails: UserDetails;
+  setOpenLiveChat: (v: boolean | ((v: boolean) => boolean)) => void;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
 }
 
 export function Controls({
@@ -31,6 +36,9 @@ export function Controls({
   turnOffMic,
   userDetails,
   handleExitOrEndRoom,
+  setOpenLiveChat,
+  darkMode,
+  toggleDarkMode,
 }: props) {
   const [displayControls, setDisplayControls] = useState<boolean>(false);
 
@@ -59,7 +67,7 @@ export function Controls({
         setDisplayControls(false);
       }}
       id="controls"
-      className="w-full h-full flex items-end justify-center  relative z-[100]"
+      className="w-full h-full flex items-end justify-center relative z-[100]"
     >
       <nav
         className="absolute translate-all duration-500 bg-[#1B1833] rounded-md px-2 py-2 z-[100]"
@@ -100,7 +108,25 @@ export function Controls({
           </li>
           <li>
             <button
-              className={`text-white text-2xl py-4 px-3  rounded-md transition-all 
+              className={`text-white text-2xl py-4 px-3 hover:bg-[#1E3E62] rounded-md transition-all`}
+              onClick={() => {
+                setOpenLiveChat((v) => !v);
+              }}
+            >
+              <BsChatLeftText></BsChatLeftText>
+            </button>
+          </li>
+          <li>
+            <button
+              className={`text-white text-2xl py-4 px-3 hover:bg-[#1E3E62] rounded-md transition-all`}
+              onClick={toggleDarkMode}
+            >
+              {darkMode ? <MdOutlineLightMode /> : <MdOutlineDarkMode />}
+            </button>
+          </li>
+          <li>
+            <button
+              className={`text-white text-2xl py-4 px-3 rounded-md transition-all 
                   ${
                     userDetails.isHost
                       ? "bg-[#FF0B55] hover:bg-[#CF0F47]"

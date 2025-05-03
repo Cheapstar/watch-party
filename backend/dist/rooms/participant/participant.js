@@ -5,7 +5,7 @@ export class Participant {
         this.producer = new Map();
         this.consumer = new Map();
         this.sendRoomDetails = async ({ userId, payload }) => {
-            const roomDetails = await this.room.getRoomDetails();
+            const roomDetails = await this.room.getDetails();
             this.wsClient.send(this.userId, "roomDetails", {
                 roomDetails: roomDetails,
             });
@@ -395,8 +395,6 @@ export class Participant {
             });
             // Close all resources for this participant
             this.close();
-            // Close the entire room
-            this.room.closeRoom();
         };
         this.exitRoom = async ({ userId, payload }) => {
             logger.info(`Participant ${this.userId} is exiting the room`, {
@@ -439,6 +437,35 @@ export class Participant {
                 payload: "",
             });
             await this.room.removeExternalMedia();
+        };
+        this.handleNewChatMessage = async ({ userId, payload }) => {
+            try {
+                const message = payload.message;
+                const lcService = this.room.getLiveChat();
+                await lcService.saveMessage(message);
+                this.wsClient.broadCastMessage({
+                    userIds: this.room.getOtherParticipantsUserId({ userId }),
+                    type: "livechat-new-message",
+                    payload: {
+                        message,
+                    },
+                });
+            }
+            catch (error) {
+                throw error;
+            }
+        };
+        this.handleGetChatMessages = async ({ userId, payload }) => {
+            try {
+                const lcService = this.room.getLiveChat();
+                const result = await lcService.getAllMessages();
+                this.wsClient.send(userId, "livechat-load-messages", {
+                    messages: result,
+                });
+            }
+            catch (error) {
+                throw error;
+            }
         };
         this.close = () => {
             logger.info(`Closing all resources for participant ${this.userId}`, {
@@ -509,6 +536,8 @@ export class Participant {
             this.wsClient.on("end-call", this.endCall, this.userId);
             this.wsClient.on("external-media", this.handleLoadExternalMedia, this.userId);
             this.wsClient.on("remove-external-media", this.handleRemoveExternalMedia, this.userId);
+            this.wsClient.on("livechat-save-message", this.handleNewChatMessage, this.userId);
+            this.wsClient.on("livechat-get-messages", this.handleGetChatMessages, this.userId);
             this.wsClient.send(this.userId, "client-loaded", "");
         };
         this.disableParticipant = () => {
@@ -526,6 +555,8 @@ export class Participant {
             this.wsClient.off("external-media", this.handleLoadExternalMedia, this.userId);
             this.wsClient.off("remove-external-media", this.handleRemoveExternalMedia, this.userId);
             this.wsClient.off("get-roomDetails", this.sendRoomDetails, this.userId);
+            this.wsClient.off("livechat-save-message", this.handleNewChatMessage, this.userId);
+            this.wsClient.off("livechat-get-messages", this.handleGetChatMessages, this.userId);
         };
         this.userId = userId;
         this.room = room;

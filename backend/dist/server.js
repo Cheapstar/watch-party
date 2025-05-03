@@ -19,9 +19,9 @@ async function startServer() {
         console.log(`Server is running on http://localhost:${process.env.PORT}`);
     });
     const mediasoupService = new MediaSoupService();
-    const roomManager = new RoomManager();
     const wsClient = new WebSocketClient(httpServer);
     const redisService = new RedisService(new Redis());
+    const roomManager = new RoomManager(redisService);
     await mediasoupService.createWorker();
     app.use(cors());
     app.use(express.json());

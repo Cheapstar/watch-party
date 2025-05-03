@@ -23,9 +23,10 @@ async function startServer() {
   });
 
   const mediasoupService = new MediaSoupService();
-  const roomManager = new RoomManager();
   const wsClient = new WebSocketClient(httpServer);
   const redisService = new RedisService(new Redis());
+
+  const roomManager = new RoomManager(redisService);
 
   await mediasoupService.createWorker();
 

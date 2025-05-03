@@ -1,9 +1,13 @@
-import { logger } from "../utils/logger.js";
-import { nanoid } from "nanoid";
-export class RoomNotFoundError extends Error {
-    constructor(roomId) {
-        super(`Room with ID ${roomId} does not exist`);
-        this.name = "RoomNotFoundError";
+export class RedisNotInitialized extends Error {
+    constructor() {
+        super(`Redis client is not initialized`);
+        this.name = "RedisNotInitialized";
+    }
+}
+export class RedisOperationFailed extends Error {
+    constructor(message) {
+        super(`Redis client is not initialized, ${message}`);
+        this.name = "RedisNotInitialized";
     }
 }
 export default class RedisService {
@@ -11,175 +15,12 @@ export default class RedisService {
         this.getKey = {
             rooms: () => `rooms`,
             members: (roomId) => `members:${roomId}`,
+            messages: (roomId) => `messages:${roomId}`,
         };
-        this.createRoom = async (roomDetails, userDetails) => {
-            try {
-                const roomId = nanoid();
-                const multi = this.redisClient.multi();
-                multi.hset(this.getKey.rooms(), roomId, JSON.stringify(roomDetails));
-                multi.hset(this.getKey.members(roomId), userDetails.userId, JSON.stringify(userDetails));
-                await multi.exec();
-                logger.info(`Room created: ${roomId}, Host: ${userDetails.userId}`);
-                return roomId;
-            }
-            catch (error) {
-                logger.error("Failed to create room", { error });
-                throw error;
-            }
-        };
-        this.addMemberToTheRoom = async (roomId, userDetails) => {
-            try {
-                await this.ensureRoomExists(roomId);
-                const res = await this.redisClient.hset(this.getKey.members(roomId), userDetails.userId, JSON.stringify(userDetails));
-                logger.info(`Member ${userDetails.userId} added to room ${roomId}`);
-                if (!res)
-                    throw new Error("Failed to add member to Redis");
-            }
-            catch (error) {
-                logger.error(`Failed to add member ${userDetails.userId} to room ${roomId}`, { error });
-                throw error;
-            }
-        };
-        this.getMemberDetails = async (roomId, userId) => {
-            try {
-                await this.ensureRoomExists(roomId);
-                const res = await this.redisClient.hget(this.getKey.members(roomId), userId);
-                if (!res)
-                    throw new Error(`Member ${userId} not found in room ${roomId}`);
-                logger.info(`Fetched member ${userId} from room ${roomId}`);
-                return JSON.parse(res);
-            }
-            catch (error) {
-                logger.error(`Failed to get member ${userId} from room ${roomId}`, {
-                    error,
-                });
-                throw error;
-            }
-        };
-        this.isRoomEmpty = async (roomId) => {
-            try {
-                const len = await this.redisClient.hlen(this.getKey.members(roomId));
-                logger.info(`Checked if room ${roomId} is empty: ${len === 0}`);
-                return len === 0;
-            }
-            catch (error) {
-                logger.error(`Error checking if room ${roomId} is empty`, { error });
-                throw error;
-            }
-        };
-        this.deleteRoom = async (roomId) => {
-            try {
-                const multi = this.redisClient.multi();
-                multi.del(this.getKey.members(roomId));
-                multi.hdel(this.getKey.rooms(), roomId);
-                await multi.exec();
-                logger.info(`Room ${roomId} and its members were deleted`);
-            }
-            catch (error) {
-                logger.error(`Error deleting room ${roomId}`, { error });
-                throw error;
-            }
-        };
-        this.saveRoom = async (roomId, roomDetails) => {
-            try {
-                logger.info(`Saving the room with roomId:${roomId}`);
-                await this.ensureRoomExists(roomId);
-                const response = this.redisClient.hset(this.getKey.rooms(), roomId, JSON.stringify(roomDetails));
-                if (!response) {
-                    throw new Error("Could not save the roomDetails");
-                }
-                logger.info(`Room Details for the room :${roomId} successfully saved`);
-            }
-            catch (error) {
-                logger.error(`Error Occured While Saving the Room in the redis`);
-                throw error;
-            }
-        };
-        this.getAllMember = async (roomId) => {
-            try {
-                await this.ensureRoomExists(roomId);
-                const members = await this.redisClient.hvals(this.getKey.members(roomId));
-                logger.info(`Fetched all members of room ${roomId}`);
-                return members.map((m) => JSON.parse(m));
-            }
-            catch (error) {
-                logger.error(`Error fetching members of room ${roomId}`, { error });
-                throw error;
-            }
-        };
-        this.roomExists = async (roomId) => {
-            const exists = (await this.redisClient.exists(this.getKey.rooms())) === 1;
-            logger.debug(`Room ${roomId} exists: ${exists}`);
-            return exists;
-        };
-        this.getRoomDetails = async (roomId) => {
-            try {
-                await this.ensureRoomExists(roomId);
-                const res = await this.redisClient.hget(this.getKey.rooms(), roomId);
-                if (!res)
-                    throw new Error(`Room details for ${roomId} not found`);
-                logger.info(`Fetched room details for ${roomId}`);
-                return JSON.parse(res);
-            }
-            catch (error) {
-                logger.error(`Error fetching room details for ${roomId}`, { error });
-                throw error;
-            }
-        };
-        this.userExists = async (roomId, userId) => {
-            try {
-                await this.ensureRoomExists(roomId);
-                logger.info(`Checking Does User with userId:${userId} Exists or not in the room ${roomId}`);
-                const userExists = await this.redisClient.hexists(this.getKey.members(roomId), userId);
-                logger.info(`UserExists result : ${userExists}`);
-                return Boolean(userExists);
-            }
-            catch (error) {
-                logger.error(`Error checking user exists for user ${userId} in room ${roomId}: ${error instanceof Error ? error.stack : error}`);
-                throw error;
-            }
-        };
-        this.isUserHost = async (roomId, userId) => {
-            try {
-                await this.ensureRoomExists(roomId);
-                const exists = await this.userExists(roomId, userId);
-                logger.info(`User Exists or not ${exists}`);
-                if (!exists)
-                    return false;
-                const res = await this.redisClient.hget(this.getKey.members(roomId), userId);
-                console.log("User Details", res);
-                if (!res)
-                    throw new Error(`User ${userId} not found in room ${roomId}`);
-                const userDetails = JSON.parse(res);
-                logger.info(`Checked host status for user ${userId} in room ${roomId}: ${userDetails.isHost}`);
-                return userDetails.isHost;
-            }
-            catch (error) {
-                logger.error(`Error checking host status for user ${userId} in room ${roomId}: ${error instanceof Error ? error.stack : error}`);
-                throw error;
-            }
-        };
-        this.removeUserFromRoom = async (roomId, userId) => {
-            try {
-                this.ensureRoomExists(roomId);
-                const exists = this.userExists(roomId, userId);
-                if (!exists) {
-                    logger.error(`User ${userId} Does not exists in room ${roomId}`);
-                    throw new Error(`User ${userId} Does not exists in room ${roomId}`);
-                }
-                await this.redisClient.hdel(this.getKey.members(roomId), userId);
-            }
-            catch (error) {
-                logger.error(`Error Deleting the user ${userId} from room ${roomId}: ${error instanceof Error ? error.stack : error}`);
-                throw error;
-            }
-        };
-        this.ensureRoomExists = async (roomId) => {
-            const exists = await this.roomExists(roomId);
-            if (!exists) {
-                logger.warn(`Room ${roomId} not found`);
-                throw new RoomNotFoundError(roomId);
-            }
+        this.getClient = () => {
+            if (!this.redisClient)
+                throw new RedisNotInitialized();
+            return this.redisClient;
         };
         this.redisClient = redisClient;
     }

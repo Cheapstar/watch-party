@@ -8,6 +8,7 @@ import {
   RtpCapabilities,
   WebRtcTransport,
 } from "mediasoup/types";
+import { MessageType } from "../../LiveChat/types.js";
 
 export class Participant {
   public sendTransport?: WebRtcTransport;
@@ -41,7 +42,7 @@ export class Participant {
   }
 
   sendRoomDetails = async ({ userId, payload }: Args) => {
-    const roomDetails = await this.room.getRoomDetails();
+    const roomDetails = await this.room.getDetails();
     this.wsClient.send(this.userId, "roomDetails", {
       roomDetails: roomDetails,
     });
@@ -542,9 +543,6 @@ export class Participant {
 
     // Close all resources for this participant
     this.close();
-
-    // Close the entire room
-    this.room.closeRoom();
   };
 
   exitRoom = async ({ userId, payload }: Args) => {
@@ -594,6 +592,38 @@ export class Participant {
       payload: "",
     });
     await this.room.removeExternalMedia();
+  };
+
+  handleNewChatMessage = async ({ userId, payload }: Args) => {
+    try {
+      const message = payload.message as MessageType;
+      const lcService = this.room.getLiveChat();
+
+      await lcService.saveMessage(message);
+
+      this.wsClient.broadCastMessage({
+        userIds: this.room.getOtherParticipantsUserId({ userId }),
+        type: "livechat-new-message",
+        payload: {
+          message,
+        },
+      });
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  handleGetChatMessages = async ({ userId, payload }: Args) => {
+    try {
+      const lcService = this.room.getLiveChat();
+      const result = await lcService.getAllMessages();
+
+      this.wsClient.send(userId, "livechat-load-messages", {
+        messages: result,
+      });
+    } catch (error) {
+      throw error;
+    }
   };
 
   close = () => {
@@ -691,6 +721,16 @@ export class Participant {
       this.handleRemoveExternalMedia,
       this.userId
     );
+    this.wsClient.on(
+      "livechat-save-message",
+      this.handleNewChatMessage,
+      this.userId
+    );
+    this.wsClient.on(
+      "livechat-get-messages",
+      this.handleGetChatMessages,
+      this.userId
+    );
 
     this.wsClient.send(this.userId, "client-loaded", "");
   };
@@ -728,6 +768,16 @@ export class Participant {
       this.userId
     );
     this.wsClient.off("get-roomDetails", this.sendRoomDetails, this.userId);
+    this.wsClient.off(
+      "livechat-save-message",
+      this.handleNewChatMessage,
+      this.userId
+    );
+    this.wsClient.off(
+      "livechat-get-messages",
+      this.handleGetChatMessages,
+      this.userId
+    );
   };
 }
 

@@ -14,6 +14,8 @@ import { RemoteMedia, UserDetails } from "@/types";
 import { AudioVisualizer } from "./AudioVisualizer";
 import { YTPlayer } from "./YTPlayer";
 import { YouTubePlayerWrapper } from "./YTPlayerWrapper";
+import { UserMediaBlock } from "./UserMediaBlock";
+import { ScreenShareBlock } from "./ScreenShareBlock";
 type VideoRenderProps = {
   userId: string;
   userCameraStream: MediaStream | undefined;
@@ -76,9 +78,9 @@ export function VideoRenderer({
 }: VideoRenderProps) {
   const totalParticipants = participants.size;
   const localAudioVideoStream = new MediaStream();
-  const [isScreenShared, setIsScreenShared] = useState<boolean>(false);
   const hasExternalMedia = !!externalMediaUrl;
 
+  let isScreenShared = false;
   // Check if screen is being shared (either local or remote)
   let remoteScreenStream: MediaStream | undefined = undefined;
   let remoteScreenSenderId: string | undefined = undefined;
@@ -86,22 +88,19 @@ export function VideoRenderer({
   remoteTracks.forEach((rm, id) => {
     if (!remoteScreenStream) {
       const newScreenStream = new MediaStream();
-      if (rm.screen) {
-        newScreenStream.addTrack(rm.screen);
-      }
-
       if (rm.screenAudio) {
         newScreenStream.addTrack(rm.screenAudio);
       }
-      remoteScreenStream = newScreenStream;
-      remoteScreenSenderId = id;
+
+      if (rm.screen) {
+        newScreenStream.addTrack(rm.screen);
+        remoteScreenSenderId = id;
+        isScreenShared = true;
+        console.log("SENDER ID IS");
+        remoteScreenStream = newScreenStream;
+      }
     }
   });
-
-  // Update screen sharing state when streams change
-  useEffect(() => {
-    setIsScreenShared(!!userScreenStream || !!remoteScreenStream);
-  }, [userScreenStream, remoteScreenStream]);
 
   if (userCameraStream) {
     localAudioVideoStream.addTrack(userCameraStream.getTracks()[0]);
@@ -114,7 +113,7 @@ export function VideoRenderer({
   // Calculate the grid layout based on participants count, screen sharing, and external media
   const getGridContainerStyle = () => {
     if (hasExternalMedia) {
-      // When YouTube video is present, force a specific layout
+      // When YouTube video is present,  a specific layout
       return "grid-cols-4";
     } else if (isScreenShared) {
       if (totalParticipants === 1) return "grid-cols-1";
@@ -132,7 +131,7 @@ export function VideoRenderer({
   };
 
   return (
-    <div className="w-full h-screen bg-gray-900 p-4 overflow-hidden z-0">
+    <div className=" h-screen bg-gray-900 p-4 overflow-hidden z-0">
       <div
         className={`grid ${getGridContainerStyle()} gap-4 h-full auto-rows-fr z-0`}
       >
@@ -146,28 +145,30 @@ export function VideoRenderer({
         )}
 
         {/* Screen sharing block - only show if no YouTube video or alongside it */}
-        {(!hasExternalMedia || (hasExternalMedia && isScreenShared)) && (
-          <ScreenShareBlock
-            mediaStream={userScreenStream || remoteScreenStream}
-            participantDetails={
-              userScreenStream
-                ? (participants.get(userId) as UserDetails)
-                : remoteScreenSenderId
-                ? (participants.get(remoteScreenSenderId) as UserDetails)
-                : (participants.get(userId) as UserDetails)
-            }
-            sendScreen={sendScreen}
-            turnOffScreen={turnOffScreen}
-            isSender={!!userScreenStream}
-            isScreenShared={isScreenShared}
-            className={
-              hasExternalMedia ? "col-span-1" : "col-span-3 row-span-2"
-            }
-          />
-        )}
+        <ScreenShareBlock
+          mediaStream={userScreenStream || remoteScreenStream}
+          participantDetails={
+            userScreenStream
+              ? (participants.get(userId) as UserDetails)
+              : remoteScreenSenderId
+              ? (participants.get(remoteScreenSenderId) as UserDetails)
+              : (participants.get(userId) as UserDetails)
+          }
+          sendScreen={sendScreen}
+          turnOffScreen={turnOffScreen}
+          isSender={!!userScreenStream}
+          isScreenShared={isScreenShared}
+          className={hasExternalMedia ? "col-span-1" : "col-span-3 row-span-2"}
+        />
 
         {/* User's own video */}
-        <div className={isScreenShared || hasExternalMedia ? "col-span-1" : ""}>
+        <div
+          className={
+            isScreenShared || hasExternalMedia
+              ? "col-span-1"
+              : "col-span-3 row-span-2"
+          }
+        >
           <UserMediaBlock
             mediaStream={localAudioVideoStream}
             participantDetails={participants.get(userId) as UserDetails}
@@ -204,276 +205,6 @@ export function VideoRenderer({
               </div>
             );
           })}
-      </div>
-    </div>
-  );
-}
-
-function UserMediaBlock({
-  mediaStream,
-  participantDetails,
-  user = false,
-}: {
-  mediaStream: MediaStream;
-  participantDetails: UserDetails;
-  user?: boolean;
-}) {
-  const [muted, setMuted] = useState<boolean>(user);
-
-  const hasVideo = mediaStream.getVideoTracks().length > 0;
-  const hasMicroPhone = mediaStream.getAudioTracks().length > 0;
-
-  function onToggleMute() {
-    if (user) return;
-
-    setMuted((m) => {
-      console.log("Setting Mute to ", !m);
-      return !m;
-    });
-  }
-
-  return (
-    <div className="w-full h-full rounded-lg overflow-hidden relative bg-gray-800 ">
-      <div className="absolute bottom-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded z-10">
-        {participantDetails.userName}
-      </div>
-      <div className="absolute top-2 right-2 flex space-x-2 z-50">
-        {hasMicroPhone && (
-          <button
-            disabled={user}
-            onClick={() => {
-              onToggleMute();
-            }}
-            className="text-white bg-black bg-opacity-50 p-2 rounded-full hover:bg-gray-500 transition-all cursor-pointer"
-          >
-            {muted ? <MdMicOff size={16} /> : <MdMic size={16} />}
-          </button>
-        )}
-        {hasVideo && (
-          <span className="text-white bg-black bg-opacity-50 p-2 rounded-full">
-            <MdVideocam size={16} />
-          </span>
-        )}
-      </div>
-      {hasVideo ? (
-        <VideoBlock
-          mediaStream={mediaStream}
-          muted={muted}
-        />
-      ) : (
-        <ProfileAndAudioBlock
-          mediaStream={mediaStream}
-          muted={muted}
-        />
-      )}
-    </div>
-  );
-}
-
-/*
-  MediaBlock can be of three types :-
-  1. No Audio && Video simple avatar images
-  2. No Video only Audio , avatar images + audio visualizer
-  3. Video may be audio  or not does not matter
-*/
-
-function VideoBlock({
-  mediaStream,
-  muted,
-}: {
-  mediaStream: MediaStream;
-  muted: boolean;
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    if (videoRef.current && mediaStream) {
-      videoRef.current.srcObject = mediaStream;
-    }
-  }, [mediaStream]);
-
-  return (
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      className="w-full h-full object-cover"
-      muted={muted}
-    ></video>
-  );
-}
-
-function ProfileAndAudioBlock({
-  mediaStream,
-  muted,
-}: {
-  mediaStream: MediaStream;
-  muted: boolean;
-}) {
-  const hasAudio = mediaStream.getAudioTracks().length > 0;
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const avatarSize = 96; // This is fine as a variable
-
-  useEffect(() => {
-    if (audioRef.current && mediaStream) {
-      audioRef.current.srcObject = mediaStream;
-    }
-  }, [mediaStream]);
-
-  return (
-    <div className="w-full h-full flex justify-center items-center relative z-0">
-      {/* Use fixed Tailwind classes instead of template literals */}
-      <div className="w-24 h-24 rounded-full z-20">
-        <img
-          src="https://api.dicebear.com/9.x/dylan/svg?radius=50"
-          alt="user-avatar"
-          className="object-cover w-full h-full rounded-full"
-        />
-      </div>
-
-      {hasAudio && (
-        <div className="absolute inset-0 z-10 pointer-events-none">
-          <AudioVisualizer
-            audioStream={mediaStream}
-            size={avatarSize}
-          />
-        </div>
-      )}
-
-      {hasAudio && (
-        <audio
-          ref={audioRef}
-          autoPlay
-          playsInline
-          muted={muted}
-        ></audio>
-      )}
-    </div>
-  );
-}
-
-/*
-  What will this Show, 
-  1. Agar koi bhi ni screen share kar raha then => Single Button "Share-Screen"
-  2. Agar Anyone is sharing the stream then that stream
-*/
-function ScreenShareBlock({
-  participantDetails,
-  mediaStream,
-  sendScreen,
-  turnOffScreen,
-  isSender,
-  isScreenShared,
-  className,
-}: {
-  participantDetails: UserDetails;
-  sendScreen: () => Promise<void>;
-  turnOffScreen: () => void;
-  mediaStream?: MediaStream;
-  isSender: boolean;
-  isScreenShared: boolean;
-  className?: string;
-}) {
-  const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
-  const [showControls, setShowControls] = useState<boolean>(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [muted, setMuted] = useState<boolean>(false); // Default to not muted for everyone
-
-  function handleScreenSharing() {
-    if (!participantDetails.permissions.canShareScreen) return;
-    sendScreen();
-  }
-
-  function handleStopScreenSharing() {
-    if (!mediaStream) return;
-    turnOffScreen();
-  }
-
-  async function toggleFullScreen() {
-    if (!containerRef.current) return;
-
-    if (!document.fullscreenElement) {
-      await containerRef.current.requestFullscreen().catch((err) => {
-        console.error(
-          `Error attempting to enable full-screen mode: ${err.message}`
-        );
-      });
-      setIsFullScreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullScreen(false);
-    }
-  }
-
-  function onToggleMute() {
-    setMuted((m) => !m);
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      className={`w-full h-full rounded-lg overflow-hidden relative bg-gray-800 ${className}`}
-      onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => setShowControls(false)}
-    >
-      {isScreenShared && (
-        <div className="absolute bottom-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded z-10">
-          {participantDetails.userName}&apos;s screen
-        </div>
-      )}
-
-      {/* Full Screen Button */}
-      {isScreenShared && (
-        <div className="absolute top-2 left-2 z-50">
-          <button
-            onClick={toggleFullScreen}
-            className="text-white bg-black bg-opacity-50 p-2 rounded-full hover:bg-gray-500 transition-all"
-          >
-            <MdFullscreen size={18} />
-          </button>
-        </div>
-      )}
-
-      {/* Mic control - only shown on hover and for screens with audio */}
-      {mediaStream && showControls && (
-        <div className="absolute top-2 right-2 flex space-x-2 z-50">
-          <button
-            onClick={onToggleMute}
-            className="text-white bg-black bg-opacity-50 p-2 rounded-full hover:bg-gray-500 transition-all cursor-pointer"
-          >
-            {muted ? <MdMicOff size={16} /> : <MdMic size={16} />}
-          </button>
-        </div>
-      )}
-
-      <div className="w-full h-full flex justify-center items-center relative">
-        {mediaStream ? (
-          <VideoBlock
-            mediaStream={mediaStream}
-            muted={isSender || muted} // Always mute for sender
-          />
-        ) : (
-          !isScreenShared && (
-            <button
-              onClick={handleScreenSharing}
-              className="px-6 py-2.5 rounded-md text-white bg-gray-700 hover:bg-gray-600 transition-all"
-            >
-              Share Screen
-            </button>
-          )
-        )}
-
-        {/* Stop Stream Button - Only shown on hover and only for sender */}
-        {isSender && showControls && mediaStream && (
-          <div className="absolute top-2 right-2 z-50">
-            <button
-              onClick={handleStopScreenSharing}
-              className="px-4 py-2 rounded-md text-white bg-red-600 hover:bg-red-700 transition-all flex items-center gap-2"
-            >
-              <MdClose size={16} /> Stop Sharing
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -50,6 +50,14 @@ export interface UserDetails {
   };
 }
 
+export type MessageType = {
+  id: string;
+  senderId: string;
+  roomId: string;
+  content: string;
+  createdAt: number;
+};
+
 // mediasoup
 export type RemoteMedia = {
   from: string;
@@ -61,7 +69,6 @@ export type RemoteMedia = {
 };
 
 // Custom Events
-
 export type NewParticipantDetails = {
   userDetails: UserDetails;
 };

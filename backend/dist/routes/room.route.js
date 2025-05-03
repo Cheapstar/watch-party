@@ -3,6 +3,7 @@ import { createRoomDetails } from "../rooms/index.js";
 import { createUserDetails, userDto } from "../redis/utils.js";
 import { Participant } from "../rooms/participant/participant.js";
 import { logger } from "../utils/logger.js";
+import { nanoid } from "nanoid";
 const ROUTES = {
     createRoom: "/create-room",
     removeUserFromRoom: "/remove-user-from-room",
@@ -29,9 +30,9 @@ export function createRoomRouter(redisService, roomManager, mediasoupService, ws
                     reactions: true,
                 },
             });
-            const roomId = await redisService.createRoom(roomDetails, userDetails);
+            const roomId = nanoid();
             const mediasoupRouter = await mediasoupService.createRouter({ roomId });
-            const room = roomManager.createRoom(roomId, mediasoupRouter, redisService);
+            await roomManager.createRoom(roomId, roomDetails, userDetails, mediasoupRouter);
             res
                 .json({
                 success: true,
@@ -55,7 +56,8 @@ export function createRoomRouter(redisService, roomManager, mediasoupService, ws
     router.post(ROUTES.removeUserFromRoom, async (req, res) => {
         try {
             const { roomId, userId, removeUserId } = req.body;
-            const isUserHost = await redisService.isUserHost(roomId, userId);
+            const room = roomManager.getRoom(roomId);
+            const isUserHost = await room.isUserHost(userId);
             if (!isUserHost) {
                 res
                     .json({
@@ -65,10 +67,9 @@ export function createRoomRouter(redisService, roomManager, mediasoupService, ws
                 return;
             }
             /* Need to handle all the mediasoup server and broadcast message to all the other participants */
-            const room = roomManager.getRoom(roomId);
             room?.removeParticipant(removeUserId);
             wsClient.send(removeUserId, "removed-from-room", "");
-            const response = await redisService.removeUserFromRoom(roomId, removeUserId);
+            const response = await room.removeParticipant(removeUserId);
             res
                 .json({
                 success: true,
@@ -94,7 +95,7 @@ export function createRoomRouter(redisService, roomManager, mediasoupService, ws
             const roomId = req.params.roomId;
             logger.info(`Details are userId:${userId} , roomId:${roomId}`);
             // Check if the room Exists
-            const roomExists = await redisService.roomExists(roomId);
+            const roomExists = await roomManager.roomExists(roomId);
             if (!roomExists) {
                 res
                     .json({
@@ -106,27 +107,24 @@ export function createRoomRouter(redisService, roomManager, mediasoupService, ws
             // Room Exists , Save the user
             // Connect this to the mediasoup client
             const room = roomManager.getRoom(roomId);
-            const isHost = await redisService.isUserHost(roomId, userId);
-            if (!isHost) {
-                const userDetails = createUserDetails(userId, username, isHost);
-                const addMember = await redisService.addMemberToTheRoom(roomId, userDetails);
-                /*
-                  Send All the existing users details about this user
-                */
-                wsClient.broadCastMessage({
-                    userIds: room.getOtherParticipantsUserId({ userId }),
-                    type: "new-participant",
-                    payload: {
-                        userDetails: userDto(userDetails),
-                    },
-                });
-            }
+            const isHost = await room.isUserHost(userId);
             const participant = new Participant(userId, room, wsClient, username, isHost);
-            room.saveParticipant(participant, userId);
+            const userDetails = createUserDetails(userId, username, isHost);
+            const addMember = await room.addMemberToTheRoom(userDetails, participant, userId, isHost);
+            /*
+                Send All the existing users details about this user
+              */
+            wsClient.broadCastMessage({
+                userIds: room.getOtherParticipantsUserId({ userId }),
+                type: "new-participant",
+                payload: {
+                    userDetails: userDto(userDetails),
+                },
+            });
             /*
               Return All the user details object for this new-joinee
             */
-            const allUserDetails = await redisService.getAllMember(roomId);
+            const allUserDetails = await room.getAllMember();
             res
                 .json({
                 success: true,
@@ -157,8 +155,7 @@ export function createRoomRouter(redisService, roomManager, mediasoupService, ws
               Handle all the mediasoup logic here
             */
             const room = roomManager.getRoom(roomId);
-            room?.removeParticipant(userId);
-            const response = await redisService.removeUserFromRoom(roomId, userId);
+            const response = await room.removeParticipant(userId);
             res
                 .json({
                 message: "User has exited the room successfully",
@@ -183,7 +180,8 @@ export function createRoomRouter(redisService, roomManager, mediasoupService, ws
         const { userId } = req.body;
         const roomId = req.params.roomId;
         try {
-            const response = await redisService.isUserHost(roomId, userId);
+            const room = roomManager.getRoom(roomId);
+            const response = await room.isUserHost(userId);
             if (!response) {
                 res
                     .json({
@@ -193,11 +191,9 @@ export function createRoomRouter(redisService, roomManager, mediasoupService, ws
                 return;
             }
             /* Yaha hume karna hai Handle all the mediasoup logic  and notify all the other participants about call end*/
-            const room = roomManager.getRoom(roomId);
             const participants = room?.getAllParticipantIds();
             /* Broadcast to all the client about room has ended */
             roomManager.deleteRoom(roomId);
-            await redisService.deleteRoom(roomId);
             res
                 .json({
                 message: "Call has been successfully terminated , ty",
