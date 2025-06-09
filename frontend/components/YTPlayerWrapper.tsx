@@ -4,6 +4,7 @@ import { YTPlayer } from "./YTPlayer";
 interface YouTubePlayerWrapperProps {
   url: string;
   handleRemoveExternalMedia: () => void;
+  darkMode: boolean;
   mediaKey?: number;
 }
 
@@ -11,9 +12,14 @@ export function YouTubePlayerWrapper({
   url,
   handleRemoveExternalMedia,
   mediaKey = 0,
+  darkMode,
 }: YouTubePlayerWrapperProps) {
+  const styles = darkMode ? "1E293B" : "bg-[#FFFFFF]";
+
   return (
-    <div className="col-span-3 row-span-2 relative w-full h-full rounded-lg overflow-hidden bg-gray-800">
+    <div
+      className={`col-span-3 row-span-2 relative w-full h-full rounded-lg overflow-hidden ${styles}`}
+    >
       <div className="absolute top-2 right-2 z-50">
         <button
           onClick={handleRemoveExternalMedia}

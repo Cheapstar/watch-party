@@ -9,6 +9,7 @@ import { BsChatLeftText } from "react-icons/bs";
 import { MdOutlineLightMode, MdOutlineDarkMode } from "react-icons/md";
 
 import { UserDetails } from "@/types";
+import { PrimaryButton } from "./PrimaryButton";
 
 interface props {
   userCameraStream: MediaStream | undefined;
@@ -58,90 +59,90 @@ export function Controls({
     }
   };
 
+  const styles = darkMode ? "bg-[#1E293B]" : "bg-[#FFFFFF]";
+
   return (
     <section
-      onMouseEnter={() => {
-        setDisplayControls(true);
-      }}
-      onMouseLeave={() => {
-        setDisplayControls(false);
-      }}
+      onMouseEnter={() => setDisplayControls(true)}
+      onMouseLeave={() => setDisplayControls(false)}
       id="controls"
-      className="w-full h-full flex items-end justify-center relative z-[100]"
+      className="w-full h-full flex items-end justify-center relative z-[100] "
     >
       <nav
-        className="absolute translate-all duration-500 bg-[#1B1833] rounded-md px-2 py-2 z-[100]"
+        className={`absolute transition-all duration-500 rounded-md px-2 py-2 z-[100] ${styles} shadow-lg`}
         style={{
           transform: displayControls ? "translateY(-10%)" : "translateY(100%)",
         }}
       >
-        <ul className="flex gap-5">
+        <ul className="flex gap-5 items-center">
           <li>
-            <button
-              className="text-white text-2xl py-4 px-3 hover:bg-[#1E3E62] rounded-md transition-all"
-              onClick={handleCameraToggle}
+            <PrimaryButton
+              clickHandler={handleCameraToggle}
+              darkMode={darkMode}
             >
               {userCameraStream ? (
-                <FiCamera></FiCamera>
+                <FiCamera className="text-2xl" />
               ) : (
-                <FiCameraOff></FiCameraOff>
+                <FiCameraOff className="text-2xl" />
               )}
-            </button>
+            </PrimaryButton>
           </li>
+
           <li>
-            <button
-              className="text-white text-2xl py-4 px-3 hover:bg-[#1E3E62] rounded-md transition-all"
-              onClick={handleMicrophoneToggle}
+            <PrimaryButton
+              clickHandler={handleMicrophoneToggle}
+              darkMode={darkMode}
             >
-              {userMicrophoneStream ? <MdMic></MdMic> : <MdMicOff></MdMicOff>}
-            </button>
+              {userMicrophoneStream ? (
+                <MdMic className="text-2xl" />
+              ) : (
+                <MdMicOff className="text-2xl" />
+              )}
+            </PrimaryButton>
           </li>
+
           <li>
-            <button
-              className={`text-white text-2xl py-4 px-3 hover:bg-[#1E3E62] rounded-md transition-all`}
-              onClick={() => {
-                setShowExternalMediaModal(true);
-              }}
+            <PrimaryButton
+              clickHandler={() => setShowExternalMediaModal(true)}
+              darkMode={darkMode}
             >
-              <RiExternalLinkLine></RiExternalLinkLine>
-            </button>
+              <RiExternalLinkLine className="text-2xl" />
+            </PrimaryButton>
           </li>
+
           <li>
-            <button
-              className={`text-white text-2xl py-4 px-3 hover:bg-[#1E3E62] rounded-md transition-all`}
-              onClick={() => {
-                setOpenLiveChat((v) => !v);
-              }}
+            <PrimaryButton
+              clickHandler={() => setOpenLiveChat((v) => !v)}
+              darkMode={darkMode}
             >
-              <BsChatLeftText></BsChatLeftText>
-            </button>
+              <BsChatLeftText className="text-2xl" />
+            </PrimaryButton>
           </li>
+
           <li>
-            <button
-              className={`text-white text-2xl py-4 px-3 hover:bg-[#1E3E62] rounded-md transition-all`}
-              onClick={toggleDarkMode}
+            <PrimaryButton
+              clickHandler={toggleDarkMode}
+              darkMode={darkMode}
             >
-              {darkMode ? <MdOutlineLightMode /> : <MdOutlineDarkMode />}
-            </button>
+              {darkMode ? (
+                <MdOutlineLightMode className="text-2xl" />
+              ) : (
+                <MdOutlineDarkMode className="text-2xl" />
+              )}
+            </PrimaryButton>
           </li>
+
           <li>
-            <button
-              className={`text-white text-2xl py-4 px-3 rounded-md transition-all 
-                  ${
-                    userDetails.isHost
-                      ? "bg-[#FF0B55] hover:bg-[#CF0F47]"
-                      : "bg-[#393E46] hover:bg-[#222831]"
-                  }`}
-              onClick={() => {
-                handleExitOrEndRoom(userDetails.isHost);
-              }}
+            <PrimaryButton
+              clickHandler={() => handleExitOrEndRoom(userDetails.isHost)}
+              darkMode={darkMode}
             >
               {userDetails.isHost ? (
-                <IoCall></IoCall>
+                <IoCall className="text-2xl" />
               ) : (
-                <MdOutlineExitToApp></MdOutlineExitToApp>
+                <MdOutlineExitToApp className="text-2xl" />
               )}
-            </button>
+            </PrimaryButton>
           </li>
         </ul>
       </nav>

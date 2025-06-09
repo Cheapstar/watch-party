@@ -30,6 +30,7 @@ type VideoRenderProps = {
   externalMediaUrl: string;
   handleRemoveExternalMedia: () => void;
   mediaKey?: number;
+  darkMode: boolean;
 };
 
 /*
@@ -75,6 +76,7 @@ export function VideoRenderer({
   externalMediaUrl,
   handleRemoveExternalMedia,
   mediaKey = 0,
+  darkMode,
 }: VideoRenderProps) {
   const totalParticipants = participants.size;
   const localAudioVideoStream = new MediaStream();
@@ -130,8 +132,10 @@ export function VideoRenderer({
     }
   };
 
+  const styles = darkMode ? "bg-[#0F172A]" : "bg-[#FEFEFE]";
+
   return (
-    <div className=" h-screen bg-gray-900 p-4 overflow-hidden z-0">
+    <div className={` h-screen  p-4 overflow-hidden z-0 ${styles}`}>
       <div
         className={`grid ${getGridContainerStyle()} gap-4 h-full auto-rows-fr z-0`}
       >
@@ -141,6 +145,7 @@ export function VideoRenderer({
             url={externalMediaUrl}
             handleRemoveExternalMedia={handleRemoveExternalMedia}
             mediaKey={mediaKey}
+            darkMode={darkMode}
           />
         )}
 
@@ -159,6 +164,7 @@ export function VideoRenderer({
           isSender={!!userScreenStream}
           isScreenShared={isScreenShared}
           className={hasExternalMedia ? "col-span-1" : "col-span-3 row-span-2"}
+          darkMode={darkMode}
         />
 
         {/* User's own video */}
@@ -173,6 +179,7 @@ export function VideoRenderer({
             mediaStream={localAudioVideoStream}
             participantDetails={participants.get(userId) as UserDetails}
             user={true}
+            darkMode={darkMode}
           />
         </div>
 
@@ -201,6 +208,7 @@ export function VideoRenderer({
                 <UserMediaBlock
                   mediaStream={mediaStream}
                   participantDetails={participant}
+                  darkMode={darkMode}
                 />
               </div>
             );

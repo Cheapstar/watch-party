@@ -8,12 +8,14 @@ interface props {
   showExternalMediaModal: boolean;
   setShowExternalMediaModal: (v: boolean) => void;
   setExternalMediaUrl: (v: string) => void;
+  darkMode: boolean;
 }
 
 export function ExternalMediaModal({
   showExternalMediaModal,
   setShowExternalMediaModal,
   setExternalMediaUrl,
+  darkMode,
 }: props) {
   const [value, setValue] = useState<string>("");
   const [error, setError] = useState<string>();
@@ -24,6 +26,8 @@ export function ExternalMediaModal({
     const match = url.match(regex);
     return match ? true : false;
   }
+
+  const styles = darkMode ? "bg-[#1E293B]" : "bg-[#F8FAFC]";
 
   return (
     <>
@@ -37,21 +41,27 @@ export function ExternalMediaModal({
           className="fixed h-screen w-screen bg-black/20 backdrop-blur-lg flex justify-center items-center z-[1000]"
         >
           <div
-            className="flex flex-col w-1/2 bg-[#123458] rounded-md p-10 gap-4 shadow-2xs"
+            className={`flex flex-col w-1/2 rounded-md p-10 gap-4 shadow-2xs ${styles}`}
             onClick={(e) => {
               e.stopPropagation();
             }}
           >
             <label
               htmlFor="external-media-url"
-              className="text-white"
+              className={`${darkMode ? "text-[#F8FAFC]" : "text-[#0F172A]"}`}
             >
               Enter Your Url
             </label>
             <input
               name="external-media-url"
-              className="bg-white/10 border border-white/20 rounded-md px-4 py-2
-             text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+              className={`rounded-md px-4 py-2
+             text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-400
+                ${
+                  darkMode
+                    ? "bg-white/10 border border-white/20 "
+                    : "border-gray-700 bg-gray-300/10"
+                }
+             `}
               placeholder="www.youtube.com/watch?v=1WE0p_axTPKJ...."
               value={value}
               onChange={(e) => setValue(e.target.value)}

@@ -13,15 +13,19 @@ import { VideoBlock } from "./VideoBlock";
   3. Video may be audio  or not does not matter
 */
 
+interface props {
+  mediaStream: MediaStream;
+  participantDetails: UserDetails;
+  darkMode: boolean;
+  user?: boolean;
+}
+
 export function UserMediaBlock({
   mediaStream,
   participantDetails,
+  darkMode,
   user = false,
-}: {
-  mediaStream: MediaStream;
-  participantDetails: UserDetails;
-  user?: boolean;
-}) {
+}: props) {
   const [muted, setMuted] = useState<boolean>(user);
 
   const hasVideo = mediaStream.getVideoTracks().length > 0;
@@ -36,8 +40,15 @@ export function UserMediaBlock({
     });
   }
 
+  const styles = darkMode
+    ? "bg-[#1E293B] border border-[#475569]"
+    : "bg-[#F8FAFC] border border-[#E2E8F0]";
+
   return (
-    <div className="w-full h-full rounded-lg overflow-hidden relative bg-gray-800 ">
+    <div
+      className={`w-full h-full rounded-lg overflow-hidden relative shadow-lg
+        ${styles}`}
+    >
       <div className="absolute bottom-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded z-10">
         {participantDetails.userName}
       </div>

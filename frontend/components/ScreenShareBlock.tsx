@@ -4,12 +4,25 @@ import { UserDetails } from "@/types";
 import { useState, useRef } from "react";
 import { MdFullscreen, MdMicOff, MdMic, MdClose } from "react-icons/md";
 import { VideoBlock } from "./VideoBlock";
+import { PrimaryButton } from "./PrimaryButton";
 
 /*
   What will this Show, 
   1. Agar koi bhi ni screen share kar raha then => Single Button "Share-Screen"
   2. Agar Anyone is sharing the stream then that stream
 */
+
+interface props {
+  participantDetails: UserDetails;
+  sendScreen: () => Promise<void>;
+  turnOffScreen: () => void;
+  mediaStream?: MediaStream;
+  isSender: boolean;
+  isScreenShared: boolean;
+  className?: string;
+  darkMode: boolean;
+}
+
 export function ScreenShareBlock({
   participantDetails,
   mediaStream,
@@ -18,15 +31,8 @@ export function ScreenShareBlock({
   isSender,
   isScreenShared,
   className,
-}: {
-  participantDetails: UserDetails;
-  sendScreen: () => Promise<void>;
-  turnOffScreen: () => void;
-  mediaStream?: MediaStream;
-  isSender: boolean;
-  isScreenShared: boolean;
-  className?: string;
-}) {
+  darkMode,
+}: props) {
   const [, setIsFullScreen] = useState<boolean>(false);
   const [showControls, setShowControls] = useState<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -62,10 +68,13 @@ export function ScreenShareBlock({
     setMuted((m) => !m);
   }
 
+  const styles = darkMode
+    ? "bg-[#1E293B] border border-[#475569]"
+    : "bg-[#F8FAFC] border border-[#E2E8F0]";
   return (
     <div
       ref={containerRef}
-      className={`w-full h-full rounded-lg overflow-hidden relative bg-gray-800 ${className}`}
+      className={`w-full h-full rounded-lg overflow-hidden relative shadow-lg ${styles} ${className}`}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >
@@ -107,12 +116,12 @@ export function ScreenShareBlock({
           />
         ) : (
           !isScreenShared && (
-            <button
-              onClick={handleScreenSharing}
-              className="px-6 py-2.5 rounded-md text-white bg-gray-700 hover:bg-gray-600 transition-all"
+            <PrimaryButton
+              clickHandler={handleScreenSharing}
+              darkMode={darkMode}
             >
               Share Screen
-            </button>
+            </PrimaryButton>
           )
         )}
 

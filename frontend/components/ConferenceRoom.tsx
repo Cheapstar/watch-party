@@ -11,7 +11,7 @@ import { VideoRenderer } from "./VideoRenderer";
 import { useRooms } from "./hooks/useRooms";
 import { UserDetails } from "@/types";
 import { ExternalMediaModal } from "./ExternalMediaModal";
-import { LayoutGroup, motion } from "motion/react";
+import { motion } from "motion/react";
 import { LiveChat } from "./LiveChat";
 import { WebSocketClient } from "@/lib/websocketClient";
 
@@ -85,25 +85,29 @@ export function ConferenceRoom() {
     return <div>Loading...</div>;
   }
 
+  const styles = darkMode ? "#0F172A" : "bg-[#FEFEFE]";
+
   return (
-    <main
-      className={`h-screen w-screen overflow-hidden ${
-        darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
-      }`}
-    >
+    <main className={`h-screen w-screen flex overflow-hidden ${styles}`}>
+      <ExternalMediaModal
+        setShowExternalMediaModal={setShowExternalMediaModal}
+        showExternalMediaModal={showExternalMediaModal}
+        setExternalMediaUrl={setExternalMediaUrl}
+        darkMode={darkMode}
+      ></ExternalMediaModal>
       <motion.div
         layout
-        className="relative flex h-full"
+        className="grow relative flex h-full"
       >
-        <div className="grow relative h-full">
-          <ExternalMediaModal
-            setShowExternalMediaModal={setShowExternalMediaModal}
-            showExternalMediaModal={showExternalMediaModal}
-            setExternalMediaUrl={setExternalMediaUrl}
-          ></ExternalMediaModal>
-
+        <motion.div
+          layout
+          className="grow relative h-full"
+        >
           {/* Controls overlay */}
-          <div className="absolute h-[10%] w-[70%] bottom-0 left-[15%] z-[100]">
+          <motion.div
+            layout
+            className="absolute h-[10%] w-[70%] bottom-0 left-[15%] z-[100]"
+          >
             <Controls
               userCameraStream={userCameraStream}
               userMicrophoneStream={userMicrophoneStream}
@@ -119,7 +123,7 @@ export function ConferenceRoom() {
               darkMode={darkMode}
               toggleDarkMode={toggleDarkMode}
             />
-          </div>
+          </motion.div>
 
           {/* Video Grid */}
           <VideoRenderer
@@ -136,24 +140,26 @@ export function ConferenceRoom() {
             externalMediaUrl={externalMediaUrl}
             handleRemoveExternalMedia={handleRemoveExternalMedia}
             mediaKey={mediaKey}
+            darkMode={darkMode}
           />
-        </div>
-        {openLiveChat && (
-          <motion.div
-            layout
-            className="w-[300px]"
-          >
-            <LiveChat
-              socket={socket as WebSocketClient}
-              messages={liveChatMessages}
-              setMessages={setLiveChatMessages}
-              participants={participants}
-              roomId={roomId as string}
-              currentUserId={userId}
-            ></LiveChat>
-          </motion.div>
-        )}
+        </motion.div>
       </motion.div>
+      {openLiveChat && (
+        <motion.div
+          layout
+          className="w-[300px]"
+        >
+          <LiveChat
+            socket={socket as WebSocketClient}
+            messages={liveChatMessages}
+            setMessages={setLiveChatMessages}
+            participants={participants}
+            roomId={roomId as string}
+            currentUserId={userId}
+            darkMode={darkMode}
+          ></LiveChat>
+        </motion.div>
+      )}
     </main>
   );
 }

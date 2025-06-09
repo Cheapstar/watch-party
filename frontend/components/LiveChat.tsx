@@ -1,9 +1,11 @@
+"use client";
 import { MessageType, UserDetails } from "@/types";
-import { SetStateAction, useEffect, useRef, useState } from "react";
+import { SetStateAction, useRef, useState } from "react";
 import { FaSmile } from "react-icons/fa";
 import { IoSend } from "react-icons/io5";
 import Picker from "emoji-picker-react";
 import { WebSocketClient } from "@/lib/websocketClient";
+import { LIGHT_THEME, DARK_THEME } from "@/constants"; // Adjust import path as needed
 
 interface Props {
   socket: WebSocketClient;
@@ -12,6 +14,7 @@ interface Props {
   setMessages: React.Dispatch<SetStateAction<MessageType[]>>;
   currentUserId: string;
   roomId: string;
+  darkMode: boolean;
 }
 
 export function LiveChat({
@@ -21,16 +24,14 @@ export function LiveChat({
   setMessages,
   currentUserId,
   roomId,
+  darkMode,
 }: Props) {
   const [messageInput, setMessageInput] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  const theme = darkMode ? DARK_THEME : LIGHT_THEME;
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,12 +65,29 @@ export function LiveChat({
     const date = new Date(timeInMs);
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
+
   return (
-    <div className="w-full h-screen flex flex-col border rounded-lg shadow-sm">
+    <div
+      className="w-full h-screen flex flex-col rounded-lg shadow-sm transition-all"
+      style={{
+        backgroundColor: theme.liveChat.background,
+        color: theme.textPrimary,
+      }}
+    >
       {/* Chat Header */}
-      <div className="py-3 px-4 border-b bg-gray-50">
-        <h3 className="text-lg font-medium">Live Chat</h3>
-        <p className="text-xs text-gray-500">
+      <div
+        className="py-3 px-4 border-b transition-all"
+        style={{
+          backgroundColor: theme.liveChat.background,
+          color: theme.textPrimary,
+          borderBottomColor: theme.border,
+        }}
+      >
+        <h3 className="text-lg font-medium transition-all">Live Chat</h3>
+        <p
+          className="text-xs transition-all"
+          style={{ color: theme.textMuted }}
+        >
           {participants.size} participants
         </p>
       </div>
@@ -100,20 +118,32 @@ export function LiveChat({
               )}
 
               <div
-                className={`max-w-xs md:max-w-md px-4 py-2 rounded-2xl ${
-                  isCurrentUser ? "bg-blue-500 text-white" : "bg-gray-200"
-                }`}
+                className="max-w-xs md:max-w-md px-4 py-2 rounded-2xl transition-all"
+                style={{
+                  backgroundColor: isCurrentUser
+                    ? theme.liveChat.message.user
+                    : theme.liveChat.message.other,
+                  color: isCurrentUser
+                    ? theme.liveChat.message.userText
+                    : theme.liveChat.message.otherText,
+                }}
               >
                 {!isCurrentUser && (
-                  <p className="text-xs font-bold mb-1">
+                  <p
+                    className="text-xs font-bold mb-1 transition-all"
+                    style={{ color: theme.textSecondary }}
+                  >
                     {sender?.userName || "Unknown user"}
                   </p>
                 )}
                 <p className="break-words">{message.content}</p>
                 <p
-                  className={`text-xs mt-1 ${
-                    isCurrentUser ? "text-blue-100" : "text-gray-500"
-                  }`}
+                  className="text-xs mt-1 transition-all"
+                  style={{
+                    color: isCurrentUser
+                      ? `${theme.liveChat.message.userText}CC` // Adding opacity
+                      : theme.textMuted,
+                  }}
                 >
                   {formatTime(message.createdAt)}
                 </p>
@@ -133,24 +163,40 @@ export function LiveChat({
       </div>
 
       {/* Input Area */}
-      <div className="border-t p-3 bg-white">
+      <div
+        className="border-t p-3 transition-all"
+        style={{
+          backgroundColor: theme.surface,
+          borderTopColor: theme.border,
+        }}
+      >
         <form
           onSubmit={handleSendMessage}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 transition-all"
         >
           <div className="relative flex-1">
-            <div className="flex items-center bg-gray-100 rounded-full px-3 py-2">
+            <div
+              className="flex items-center rounded-full px-3 py-2 transition-all"
+              style={{
+                backgroundColor: theme.liveChat.input.background,
+                border: `1px solid ${theme.liveChat.input.border}`,
+              }}
+            >
               <input
                 type="text"
                 placeholder="Type a message..."
                 value={messageInput}
                 onChange={(e) => setMessageInput(e.target.value)}
-                className="flex-1 bg-transparent focus:outline-none text-sm"
+                className="flex-1 bg-transparent focus:outline-none text-sm transition-all"
+                style={{
+                  color: theme.textPrimary,
+                }}
               />
               <button
                 type="button"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="text-gray-500 hover:text-gray-700"
+                className="hover:opacity-70 transition-opacity"
+                style={{ color: theme.icon.default }}
               >
                 <FaSmile size={20} />
               </button>
@@ -163,7 +209,11 @@ export function LiveChat({
           </div>
           <button
             type="submit"
-            className="bg-blue-500 hover:bg-blue-600 text-white rounded-full p-3"
+            className="rounded-full p-3 hover:opacity-90 transition-opacity disabled:opacity-50"
+            style={{
+              backgroundColor: theme.button.primary.background,
+              color: theme.button.primary.text,
+            }}
             disabled={messageInput.trim() === ""}
           >
             <IoSend size={20} />
