@@ -84,7 +84,7 @@ export function useMediasoup({ joinedStatus }: { joinedStatus: boolean }) {
             ? error.message
             : `Permission Denied to use the camera, check your system`
         );
-        return;
+        alert(`Please Allow Permission in the your system to use `);
       }
     }
   }, [msClient, socket]);
@@ -111,7 +111,7 @@ export function useMediasoup({ joinedStatus }: { joinedStatus: boolean }) {
             ? error.message
             : `Permission Denied to use the Microphone, check your system`
         );
-        return;
+        alert(`Please Allow Permission in the your system to use `);
       }
     }
   }, [msClient, socket]);
@@ -143,7 +143,7 @@ export function useMediasoup({ joinedStatus }: { joinedStatus: boolean }) {
             ? error.message
             : `Permission Denied to use the screen, check your system`
         );
-        return;
+        alert(`Please Allow Permission in the your system to use `);
       }
     }
   }, [msClient, socket]);
@@ -180,7 +180,6 @@ export function useMediasoup({ joinedStatus }: { joinedStatus: boolean }) {
       });
 
       if (isAllowed.state === "denied" || isAllowed.state === "prompt") {
-        alert(`Please Allow Permission in the your system to use ${type}`);
         throw new Error("Permission Denied");
       }
       return;

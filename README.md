@@ -1,5 +1,21 @@
 # Project README
 
+## 🎉 Watch Party
+
+Watch Party is a real-time video streaming platform built with **Next.js** and **MediaSoup**, allowing friends to watch videos together in perfect sync—no matter where they are.
+
+It features:
+
+- 🎬 **Synchronized video playback** powered by **MediaSoup**
+- 💬 **Live chat** and interactive room experience
+- 🧠 **Custom WebSocket protocol** built from scratch using the `ws` library
+- 📺 **YouTube integration** to stream content directly in rooms
+- 🧑‍🤝‍🧑 Host and join private/public rooms
+
+Everything is handled in real-time, with low latency and tight playback synchronization, making it ideal for movie nights, remote meetups, or study groups.
+
+---
+
 ## Getting Started
 
 This README will guide you through setting up and running both the frontend and backend of the project.
@@ -58,4 +74,3 @@ npm start
 - Frontend: Run `npm run dev` for hot-reloading development environment
 - Backend: Run `npm run build` followed by `npm start` after making changes
 - Redis: Ensure the Redis Docker container is running whenever working with the backend
-
