@@ -2,6 +2,8 @@
 
 ## 🎉 Watch Party
 
+![Alt text](./frontend/public/readMePic.png)
+
 Watch Party is a real-time video streaming platform built with **Next.js** and **MediaSoup**, allowing friends to watch videos together in perfect sync—no matter where they are.
 
 It features:
