@@ -8,8 +8,8 @@ interface props {
 
 export function PrimaryButton({ clickHandler, children, darkMode }: props) {
   const buttonClass = darkMode
-    ? "bg-[#3B82F6] text-[#FFFFFF] hover:bg-[#2563EB]"
-    : "bg-[#3B82F6] text-[#FFFFFF] hover:bg-[#2563EB]";
+    ? "bg-[#6b9dc4] text-[#ECF0F1] hover:bg-[#5691bd]"
+    : "bg-[#6b9dc4] text-[#FFFFFF] hover:bg-[#6b9dc4]";
 
   return (
     <button

@@ -165,7 +165,7 @@ export class MediasoupClient {
     const audioTracks = mediaStream.getAudioTracks();
 
     if (audioTracks.length === 0) {
-      console.error(`No audio tracks found for ${producerType}`);
+      console.log(`No audio tracks found for ${producerType}`);
       return;
     }
 
