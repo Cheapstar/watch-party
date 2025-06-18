@@ -38,7 +38,7 @@ export function ExternalMediaModal({
             setValue("");
             setShowExternalMediaModal(false);
           }}
-          className="fixed h-screen w-screen bg-black/20 backdrop-blur-lg flex justify-center items-center z-[1000]"
+          className="fixed h-screen w-screen bg-black/20 backdrop-blur-lg flex justify-center items-center z-[10]"
         >
           <div
             className={`flex flex-col w-1/2 rounded-md p-10 gap-4 shadow-2xs ${styles}`}

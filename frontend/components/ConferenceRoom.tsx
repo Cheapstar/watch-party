@@ -14,6 +14,7 @@ import { ExternalMediaModal } from "./ExternalMediaModal";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { LiveChat } from "./LiveChat";
 import { WebSocketClient } from "@/lib/websocketClient";
+import { ShareLinkModal } from "./ShareLinkModal";
 
 export function ConferenceRoom() {
   const [userId] = useAtom(userIdAtom);
@@ -21,13 +22,14 @@ export function ConferenceRoom() {
   const [isHost] = useAtom(isHostAtom);
   const [roomId] = useAtom(roomIdAtom);
 
+  const [showShareLinkModal, setShowShareLinkModal] = useState<boolean>(true);
   const [showExternalMediaModal, setShowExternalMediaModal] =
     useState<boolean>(false);
 
   const [openLiveChat, setOpenLiveChat] = useState<boolean>(false);
 
   // Add dark mode state
-  const [darkMode, setDarkMode] = useState<boolean>(false);
+  const [darkMode, setDarkMode] = useState<boolean>(true);
 
   const toggleDarkMode = () => {
     setDarkMode((prev) => !prev);
@@ -78,7 +80,7 @@ export function ConferenceRoom() {
   }, [remoteTracks]);
 
   if (!userId || !username) {
-    return <JoinRoomModal />;
+    return <JoinRoomModal darkMode={darkMode} />;
   }
 
   if (participants.size < 1) {
@@ -89,6 +91,11 @@ export function ConferenceRoom() {
 
   return (
     <main className={`h-screen w-screen flex overflow-hidden ${styles}`}>
+      <ShareLinkModal
+        darkMode={darkMode}
+        showShareLinkModal={showShareLinkModal}
+        setShowShareLinkModal={setShowShareLinkModal}
+      ></ShareLinkModal>
       <ExternalMediaModal
         setShowExternalMediaModal={setShowExternalMediaModal}
         showExternalMediaModal={showExternalMediaModal}
