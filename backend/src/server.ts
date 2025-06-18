@@ -24,7 +24,12 @@ async function startServer() {
 
   const mediasoupService = new MediaSoupService();
   const wsClient = new WebSocketClient(httpServer);
-  const redisService = new RedisService(new Redis());
+  const redisService = new RedisService(
+    new Redis({
+      port: Number(process.env.REDIS_PORT),
+      host: process.env.REDIS_HOST || "127.0.0.1",
+    })
+  );
 
   const roomManager = new RoomManager(redisService);
 
